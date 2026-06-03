@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface User {
   id: string;
@@ -15,16 +16,21 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuth = create<AuthState>((set) => ({
-  user: null,
-  isAuth: false,
-  setUser: (user) => set({ user, isAuth: !!user }),
-  login: (user, token) => {
-    localStorage.setItem('token', token);
-    set({ user, isAuth: true });
-  },
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ user: null, isAuth: false });
-  },
-}));
+export const useAuth = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuth: false,
+      setUser: (user) => set({ user, isAuth: !!user }),
+      login: (user, token) => {
+        localStorage.setItem('token', token);
+        set({ user, isAuth: true });
+      },
+      logout: () => {
+        localStorage.removeItem('token');
+        set({ user: null, isAuth: false });
+      },
+    }),
+    { name: 'gbai-auth' }
+  )
+);

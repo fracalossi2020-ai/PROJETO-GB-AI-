@@ -25,20 +25,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!isAuth && !localStorage.getItem('token')) {
+    const token = localStorage.getItem('token');
+    if (!isAuth && !token) {
       router.push('/login');
     }
+    setChecking(false);
   }, [isAuth, router]);
 
-  if (!isAuth) return null;
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-[#ff9607] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-sm">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuth && !localStorage.getItem('token')) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex">
       {/* Sidebar */}
       <aside
-        className={`${collapsed ? 'w-20' : 'w-64'} bg-zinc-900 border-r border-white/5 flex flex-col transition-all duration-300`}
+        className={`${collapsed ? 'w-20' : 'w-64'} bg-zinc-900 border-r border-white/5 flex flex-col transition-all duration-300 flex-shrink-0`}
       >
         <div className="p-5 flex items-center justify-between">
           {!collapsed && (

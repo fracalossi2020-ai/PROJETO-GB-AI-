@@ -50,8 +50,14 @@ const cardapioOptions = [
 
 export default function Step4Cardapio() {
   const router = useRouter();
-  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+
+  function toggleTemplate(type: string) {
+    setSelectedTemplates(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  }
 
   function toggleOption(id: string) {
     setSelectedOptions(prev =>
@@ -60,7 +66,7 @@ export default function Step4Cardapio() {
   }
 
   function handleNext() {
-    localStorage.setItem('setup_cardapio_template', selectedTemplate);
+    localStorage.setItem('setup_cardapio_templates', JSON.stringify(selectedTemplates));
     localStorage.setItem('setup_cardapio_options', JSON.stringify(selectedOptions));
     router.push('/setup/step-5-entrega');
   }
@@ -84,9 +90,9 @@ export default function Step4Cardapio() {
           {templates.map((t) => (
             <button
               key={t.type}
-              onClick={() => setSelectedTemplate(t.type)}
+              onClick={() => toggleTemplate(t.type)}
               className={`text-left p-4 rounded-xl border-2 transition-all ${
-                selectedTemplate === t.type
+                selectedTemplates.includes(t.type)
                   ? 'border-[#ff9607] bg-[#ff9607]/5'
                   : 'border-white/10 bg-white/5 hover:border-white/20'
               }`}
@@ -96,7 +102,7 @@ export default function Step4Cardapio() {
                   <p className="font-bold text-lg">{t.name}</p>
                   <p className="text-sm text-gray-400 mt-1">{t.desc}</p>
                 </div>
-                {selectedTemplate === t.type && (
+                {selectedTemplates.includes(t.type) && (
                   <div className="w-6 h-6 bg-[#ff9607] rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                     <Check className="h-4 w-4 text-black" />
                   </div>
@@ -158,7 +164,7 @@ export default function Step4Cardapio() {
         </button>
         <button
           onClick={handleNext}
-          disabled={!selectedTemplate}
+          disabled={selectedTemplates.length === 0}
           className="flex-[2] bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar <ArrowRight className="h-5 w-5" />

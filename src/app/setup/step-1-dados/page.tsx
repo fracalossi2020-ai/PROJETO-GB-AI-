@@ -2,20 +2,72 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Store, ArrowRight } from 'lucide-react';
+import { Store, ArrowRight, MapPin, Loader2 } from 'lucide-react';
 
 export default function Step1Dados() {
   const router = useRouter();
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [cepError, setCepError] = useState('');
   const [form, setForm] = useState({
     name: '',
     phone: '',
     whatsapp: '',
+    cep: '',
     address: '',
+    addressNumber: '',
+    complement: '',
+    neighborhood: '',
     city: '',
     state: '',
     cnpj: '',
     cpf: '',
   });
+
+  function formatCep(value: string) {
+    return value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9);
+  }
+
+  async function buscarCep(rawCep: string) {
+    const cepLimpo = rawCep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) return;
+
+    setLoadingCep(true);
+    setCepError('');
+
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const data = await res.json();
+
+      if (data.erro) {
+        setCepError('CEP não encontrado');
+        setLoadingCep(false);
+        return;
+      }
+
+      setForm(prev => ({
+        ...prev,
+        address: data.logradouro || prev.address,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }));
+    } catch {
+      setCepError('Erro ao buscar CEP');
+    } finally {
+      setLoadingCep(false);
+    }
+  }
+
+  function handleCepChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatCep(e.target.value);
+    setForm(prev => ({ ...prev, cep: formatted }));
+    setCepError('');
+
+    const cepLimpo = formatted.replace(/\D/g, '');
+    if (cepLimpo.length === 8) {
+      buscarCep(formatted);
+    }
+  }
 
   function handleNext() {
     localStorage.setItem('setup_dados', JSON.stringify(form));
@@ -62,12 +114,64 @@ export default function Step1Dados() {
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
           />
         </div>
+
+        {/* CEP */}
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-300 mb-1">Endereço</label>
+          <label className="block text-sm font-medium text-gray-300 mb-1 flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-[#ff9607]" />
+            CEP
+          </label>
+          <div className="relative">
+            <input
+              value={form.cep}
+              onChange={handleCepChange}
+              placeholder="00000-000"
+              maxLength={9}
+              className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607] pr-12 ${
+                cepError ? 'border-red-500' : 'border-white/10'
+              }`}
+            />
+            {loadingCep && (
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#ff9607] animate-spin" />
+            )}
+          </div>
+          {cepError && <p className="text-red-400 text-xs mt-1">{cepError}</p>}
+          <p className="text-gray-500 text-xs mt-1">Digite o CEP para preencher o endereço automaticamente</p>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-300 mb-1">Endereço (Rua / Avenida)</label>
           <input
             value={form.address}
             onChange={e => setForm({ ...form, address: e.target.value })}
-            placeholder="Rua das Flores, 123 - Centro"
+            placeholder="Rua das Flores"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Número *</label>
+          <input
+            value={form.addressNumber}
+            onChange={e => setForm({ ...form, addressNumber: e.target.value })}
+            placeholder="123, Apt 45, Casa 2"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Complemento</label>
+          <input
+            value={form.complement}
+            onChange={e => setForm({ ...form, complement: e.target.value })}
+            placeholder="Bloco B, Sala 101"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Bairro</label>
+          <input
+            value={form.neighborhood}
+            onChange={e => setForm({ ...form, neighborhood: e.target.value })}
+            placeholder="Centro"
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
           />
         </div>
@@ -86,7 +190,8 @@ export default function Step1Dados() {
             value={form.state}
             onChange={e => setForm({ ...form, state: e.target.value })}
             placeholder="SP"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+            maxLength={2}
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607] uppercase"
           />
         </div>
         <div>

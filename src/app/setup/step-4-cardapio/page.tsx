@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UtensilsCrossed, ArrowRight, ArrowLeft, Sparkles, Camera, Link2, Upload } from 'lucide-react';
+import { UtensilsCrossed, ArrowRight, ArrowLeft, Sparkles, Link2, Upload, FileText, Check } from 'lucide-react';
 
 const templates = [
   { type: 'HAMBURGUERIA', name: '🍔 Hamburgueria', desc: 'Burgers, combos, porções e bebidas' },
@@ -17,20 +17,51 @@ const templates = [
   { type: 'BEBIDAS', name: '🥤 Bebidas', desc: 'Sucos, refrigerantes, cervejas, água' },
 ];
 
-const iaOptions = [
-  { icon: Sparkles, label: 'Gerar com IA', desc: 'Descreva seu cardápio e a IA cria tudo' },
-  { icon: Camera, label: 'Foto do cardápio', desc: 'Tire foto ou envie imagem do cardápio atual' },
-  { icon: Link2, label: 'Copiar do iFood', desc: 'Cole o link da sua loja no iFood' },
-  { icon: Upload, label: 'Importar dados', desc: 'Envie planilha ou arquivo' },
+const cardapioOptions = [
+  {
+    id: 'ia',
+    icon: Sparkles,
+    title: 'Feito com IA',
+    subtitle: 'Cardápio Inteligente',
+    desc: 'Vamos montar um cardápio completo em poucos minutos com base nos produtos mais vendidos das categorias selecionadas.',
+  },
+  {
+    id: 'ifood',
+    icon: Link2,
+    title: 'Copiar cardápio iFood',
+    subtitle: '',
+    desc: 'Vamos copiar seu cardápio iFood. Você pode editar os itens posteriormente no Gestor de Cardápio.',
+  },
+  {
+    id: 'import',
+    icon: Upload,
+    title: 'Lido com IA',
+    subtitle: 'Importar arquivo do cardápio',
+    desc: 'Envie um arquivo do seu cardápio. Nossa IA irá ler e criar automaticamente suas categorias, itens e adicionais.',
+  },
+  {
+    id: 'manual',
+    icon: FileText,
+    title: 'Cadastrar cardápio manualmente',
+    subtitle: '',
+    desc: 'Cadastre seus produtos, categorias e adicionais manualmente no sistema.',
+  },
 ];
 
 export default function Step4Cardapio() {
   const router = useRouter();
-  const [mode, setMode] = useState<'template' | 'ia'>('template');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+
+  function toggleOption(id: string) {
+    setSelectedOptions(prev =>
+      prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]
+    );
+  }
 
   function handleNext() {
     localStorage.setItem('setup_cardapio_template', selectedTemplate);
+    localStorage.setItem('setup_cardapio_options', JSON.stringify(selectedOptions));
     router.push('/setup/step-5-entrega');
   }
 
@@ -41,31 +72,14 @@ export default function Step4Cardapio() {
           <UtensilsCrossed className="h-7 w-7 text-[#ff9607]" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold">Cardápio</h2>
-          <p className="text-gray-400">Escolha como criar seu cardápio</p>
+          <h2 className="text-2xl font-bold">CADASTRE SEU CARDÁPIO</h2>
+          <p className="text-gray-400">Escolha o tipo do seu estabelecimento e como deseja criar o cardápio</p>
         </div>
       </div>
 
-      <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
-        <button
-          onClick={() => setMode('template')}
-          className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-            mode === 'template' ? 'bg-[#ff9607] text-black' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Templates
-        </button>
-        <button
-          onClick={() => setMode('ia')}
-          className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-            mode === 'ia' ? 'bg-[#ff9607] text-black' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Inteligência Artificial
-        </button>
-      </div>
-
-      {mode === 'template' && (
+      {/* Templates */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-300 mb-3">Tipo do estabelecimento *</h3>
         <div className="grid md:grid-cols-2 gap-3">
           {templates.map((t) => (
             <button
@@ -77,32 +91,63 @@ export default function Step4Cardapio() {
                   : 'border-white/10 bg-white/5 hover:border-white/20'
               }`}
             >
-              <p className="font-bold text-lg">{t.name}</p>
-              <p className="text-sm text-gray-400 mt-1">{t.desc}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-lg">{t.name}</p>
+                  <p className="text-sm text-gray-400 mt-1">{t.desc}</p>
+                </div>
+                {selectedTemplate === t.type && (
+                  <div className="w-6 h-6 bg-[#ff9607] rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                    <Check className="h-4 w-4 text-black" />
+                  </div>
+                )}
+              </div>
             </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {mode === 'ia' && (
+      {/* Opções de criação do cardápio */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-300 mb-3">Como deseja criar seu cardápio? (pode marcar mais de uma)</h3>
         <div className="grid md:grid-cols-2 gap-3">
-          {iaOptions.map((option) => {
+          {cardapioOptions.map((option) => {
             const Icon = option.icon;
+            const isSelected = selectedOptions.includes(option.id);
             return (
               <button
-                key={option.label}
-                className="text-left p-4 rounded-xl border-2 border-white/10 bg-white/5 hover:border-[#ff9607]/50 transition-all"
+                key={option.id}
+                onClick={() => toggleOption(option.id)}
+                className={`text-left p-4 rounded-xl border-2 transition-all relative ${
+                  isSelected
+                    ? 'border-[#ff9607] bg-[#ff9607]/5'
+                    : 'border-white/10 bg-white/5 hover:border-white/20'
+                }`}
               >
-                <div className="w-10 h-10 bg-[#ff9607]/10 rounded-xl flex items-center justify-center mb-3">
-                  <Icon className="h-5 w-5 text-[#ff9607]" />
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    isSelected ? 'bg-[#ff9607]/20' : 'bg-[#ff9607]/10'
+                  }`}>
+                    <Icon className="h-5 w-5 text-[#ff9607]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold">{option.title}</p>
+                    {option.subtitle && (
+                      <p className="text-sm text-[#ff9607] font-medium">{option.subtitle}</p>
+                    )}
+                    <p className="text-sm text-gray-400 mt-1">{option.desc}</p>
+                  </div>
+                  {isSelected && (
+                    <div className="w-6 h-6 bg-[#ff9607] rounded-full flex items-center justify-center flex-shrink-0">
+                      <Check className="h-4 w-4 text-black" />
+                    </div>
+                  )}
                 </div>
-                <p className="font-bold">{option.label}</p>
-                <p className="text-sm text-gray-400 mt-1">{option.desc}</p>
               </button>
             );
           })}
         </div>
-      )}
+      </div>
 
       <div className="flex gap-3">
         <button
@@ -113,7 +158,8 @@ export default function Step4Cardapio() {
         </button>
         <button
           onClick={handleNext}
-          className="flex-[2] bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2"
+          disabled={!selectedTemplate}
+          className="flex-[2] bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Continuar <ArrowRight className="h-5 w-5" />
         </button>

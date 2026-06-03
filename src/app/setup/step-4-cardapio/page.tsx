@@ -51,7 +51,7 @@ const cardapioOptions = [
 export default function Step4Cardapio() {
   const router = useRouter();
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string>('');
 
   function toggleTemplate(type: string) {
     setSelectedTemplates(prev =>
@@ -59,15 +59,13 @@ export default function Step4Cardapio() {
     );
   }
 
-  function toggleOption(id: string) {
-    setSelectedOptions(prev =>
-      prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]
-    );
+  function selectOption(id: string) {
+    setSelectedOption(id);
   }
 
   function handleNext() {
     localStorage.setItem('setup_cardapio_templates', JSON.stringify(selectedTemplates));
-    localStorage.setItem('setup_cardapio_options', JSON.stringify(selectedOptions));
+    localStorage.setItem('setup_cardapio_option', selectedOption);
     router.push('/setup/step-5-entrega');
   }
 
@@ -115,15 +113,15 @@ export default function Step4Cardapio() {
 
       {/* Opções de criação do cardápio */}
       <div>
-        <h3 className="text-sm font-medium text-gray-300 mb-3">Como deseja criar seu cardápio? (pode marcar mais de uma)</h3>
+        <h3 className="text-sm font-medium text-gray-300 mb-3">Como deseja criar seu cardápio? (escolha uma opção)</h3>
         <div className="grid md:grid-cols-2 gap-3">
           {cardapioOptions.map((option) => {
             const Icon = option.icon;
-            const isSelected = selectedOptions.includes(option.id);
+            const isSelected = selectedOption === option.id;
             return (
               <button
                 key={option.id}
-                onClick={() => toggleOption(option.id)}
+                onClick={() => selectOption(option.id)}
                 className={`text-left p-4 rounded-xl border-2 transition-all relative ${
                   isSelected
                     ? 'border-[#ff9607] bg-[#ff9607]/5'

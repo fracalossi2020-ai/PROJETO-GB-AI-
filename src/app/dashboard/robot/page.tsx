@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect } from 'react';
 import {
-  Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2, AlertTriangle,
-  Smartphone, QrCode, Copy, CheckCircle2, RefreshCw, Link, Power, ShieldCheck, Pencil
+  Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2,
+  Smartphone, QrCode, CheckCircle2, Power, ShieldCheck, Pencil, RefreshCw,
+  Copy, ExternalLink
 } from 'lucide-react';
 
 interface KeywordResponse {
@@ -24,7 +24,9 @@ const DEFAULT_KEYWORDS: KeywordResponse[] = [
 export default function RobotPage() {
   const [enabled, setEnabled] = useState(false);
   const [connected, setConnected] = useState(false);
-  const [showQr, setShowQr] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [qrLink, setQrLink] = useState('');
+  const [loadingQr, setLoadingQr] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(
     '👋 Olá! Bem-vindo ao *{nome_loja}*!\n\nSou seu assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?'
   );
@@ -40,6 +42,22 @@ export default function RobotPage() {
 
   const [newKeyword, setNewKeyword] = useState('');
   const [newResponse, setNewResponse] = useState('');
+
+  async function generateQr() {
+    setLoadingQr(true);
+    try {
+      const res = await fetch('/api/whatsapp/qr');
+      const data = await res.json();
+      if (data.success) {
+        setQrCode(data.data.qrCode);
+        setQrLink(data.data.link);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingQr(false);
+    }
+  }
 
   function startEdit(kw: KeywordResponse) {
     setEditingId(kw.id);
@@ -101,54 +119,33 @@ export default function RobotPage() {
         {!connected ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <Power className="h-5 w-5 text-green-500" />
+              <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
+                <Power className="h-5 w-5 text-red-400" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Status: Desconectado</p>
-                <p className="text-xs text-gray-500">Conecte seu WhatsApp para o robô começar a atender</p>
+                <p className="text-xs text-gray-500">Gere o QR Code e escaneie com o WhatsApp do estabelecimento</p>
               </div>
             </div>
 
-            {!showQr ? (
+            {!qrCode ? (
               <button
-                onClick={() => setShowQr(true)}
-                className="w-full py-3 bg-[#ff9607] text-black rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2"
+                onClick={generateQr}
+                disabled={loadingQr}
+                className="w-full py-3 bg-[#ff9607] text-black rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <QrCode className="h-4 w-4" /> Gerar QR Code
+                {loadingQr ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
+                {loadingQr ? 'Gerando...' : 'Gerar QR Code'}
               </button>
             ) : (
               <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl">
-                <div className="w-52 h-52 bg-white rounded-xl flex items-center justify-center relative overflow-hidden">
-                  {/* Simulated QR Code */}
-                  <div className="grid grid-cols-7 grid-rows-7 gap-0.5 w-44 h-44 p-2">
-                    {Array.from({ length: 49 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`${
-                          [0,1,2,3,4,5,6,7,13,14,20,21,27,28,34,35,41,42,43,44,45,46,47,48,8,16,24,32,40,12,18,24,30,36].includes(i)
-                            ? 'bg-zinc-900'
-                            : 'bg-white'
-                        }`}
-                      />
-                    ))}
-                    {/* Corner markers */}
-                    <div className="absolute top-2.5 left-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
-                      <div className="w-5 h-5 bg-zinc-900" />
-                    </div>
-                    <div className="absolute top-2.5 right-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
-                      <div className="w-5 h-5 bg-zinc-900" />
-                    </div>
-                    <div className="absolute bottom-2.5 left-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
-                      <div className="w-5 h-5 bg-zinc-900" />
-                    </div>
-                  </div>
-                  {/* WhatsApp icon overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
-                      <Smartphone className="h-5 w-5 text-green-600" />
-                    </div>
-                  </div>
+                {/* QR Code Image */}
+                <div className="bg-white p-3 rounded-xl">
+                  <img src={qrCode} alt="QR Code WhatsApp" className="w-52 h-52" />
                 </div>
 
                 <div className="text-center space-y-1">
@@ -156,18 +153,48 @@ export default function RobotPage() {
                   <p className="text-xs text-gray-500">Abra o WhatsApp no celular → Configurações → Aparelhos conectados → Conectar aparelho</p>
                 </div>
 
+                <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2 w-full">
+                  <input
+                    value={qrLink}
+                    readOnly
+                    className="flex-1 bg-transparent text-xs text-gray-400 outline-none"
+                  />
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(qrLink); }}
+                    className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors"
+                    title="Copiar link"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <a
+                    href={qrLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors"
+                    title="Abrir link"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+
                 <div className="flex gap-2 w-full">
                   <button
-                    onClick={() => setShowQr(false)}
+                    onClick={() => setQrCode(null)}
                     className="flex-1 py-2.5 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors"
                   >
-                    Cancelar
+                    Fechar
                   </button>
                   <button
-                    onClick={() => { setConnected(true); setShowQr(false); }}
-                    className="flex-1 py-2.5 bg-green-500 text-black rounded-xl text-sm font-bold hover:bg-green-400 transition-colors flex items-center justify-center gap-2"
+                    onClick={generateQr}
+                    className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors"
                   >
-                    <CheckCircle2 className="h-4 w-4" /> Simular Conexão
+                    <RefreshCw className="h-3.5 w-3.5" /> Novo QR
+                  </button>
+                  <button
+                    onClick={() => setConnected(true)}
+                    className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-green-500 text-black rounded-xl text-sm font-bold hover:bg-green-400 transition-colors"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Conectado
                   </button>
                 </div>
               </div>
@@ -181,7 +208,7 @@ export default function RobotPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-green-400">WhatsApp Conectado</p>
-                <p className="text-xs text-gray-500">+55 11 99999-9999 · Última sincronização: agora</p>
+                <p className="text-xs text-gray-500">Robô ativo e respondendo mensagens automaticamente</p>
               </div>
               <button
                 onClick={() => setConnected(false)}

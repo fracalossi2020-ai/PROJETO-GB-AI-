@@ -149,9 +149,9 @@ export default function RobotPage() {
                 </div>
 
                 <div className="text-center space-y-2">
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2">
-                    <p className="text-sm font-bold text-green-400">📱 Escaneie dentro do WhatsApp</p>
-                    <p className="text-xs text-gray-400 mt-1">Abra o WhatsApp → Configurações → Aparelhos Conectados → Conectar Aparelho</p>
+                  <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-lg p-2">
+                    <p className="text-sm font-bold text-[#ff9607]">📱 Escaneie com a CÂMERA do celular</p>
+                    <p className="text-xs text-gray-400 mt-1">Não escaneie dentro do WhatsApp. Use a câmera do celular mesmo!</p>
                   </div>
                   <p className="text-xs text-gray-500">Ao escanear, o WhatsApp abre com a mensagem pré-preenchida</p>
                 </div>

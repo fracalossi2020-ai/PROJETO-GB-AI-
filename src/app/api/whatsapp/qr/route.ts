@@ -1,45 +1,29 @@
 import { NextResponse } from 'next/server';
-import { initWhatsApp, getWhatsAppStatus } from '@/lib/whatsapp';
+import QRCode from 'qrcode';
 
 export async function GET() {
   try {
-    await initWhatsApp();
+    const phone = '5511999999999';
+    const message = encodeURIComponent('Olá! Vi o QR Code e quero fazer um pedido 🍔');
+    const link = `https://wa.me/${phone}?text=${message}`;
 
-    // Aguarda até 5 segundos pelo QR code
-    let attempts = 0;
-    while (attempts < 20) {
-      const status = getWhatsAppStatus();
-      if (status.qr) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            qrCode: status.qr,
-            connected: status.connected,
-            message: 'Escaneie com o WhatsApp',
-          },
-        });
-      }
-      if (status.connected) {
-        return NextResponse.json({
-          success: true,
-          data: {
-            qrCode: null,
-            connected: true,
-            message: 'WhatsApp já conectado',
-          },
-        });
-      }
-      await new Promise(r => setTimeout(r, 500));
-      attempts++;
-    }
+    const qrBase64 = await QRCode.toDataURL(link, {
+      width: 400,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
 
     return NextResponse.json({
-      success: false,
-      error: 'QR Code não gerado. Tente novamente.',
-    }, { status: 202 });
-  } catch (error) {
+      success: true,
+      data: {
+        qrCode: qrBase64,
+        link,
+        phone,
+      },
+    });
+  } catch {
     return NextResponse.json(
-      { success: false, error: 'Erro ao gerar QR Code do WhatsApp' },
+      { success: false, error: 'Erro ao gerar QR Code' },
       { status: 500 }
     );
   }

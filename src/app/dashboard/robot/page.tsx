@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import {
   Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2, AlertTriangle,
-  Smartphone, QrCode, Copy, CheckCircle2, RefreshCw, Link, Power, ShieldCheck
+  Smartphone, QrCode, Copy, CheckCircle2, RefreshCw, Link, Power, ShieldCheck, Pencil
 } from 'lucide-react';
 
 interface KeywordResponse {

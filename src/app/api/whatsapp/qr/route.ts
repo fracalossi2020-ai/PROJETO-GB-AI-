@@ -3,9 +3,10 @@ import QRCode from 'qrcode';
 
 export async function GET() {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const storeSlug = 'burger-king-gb';
-    const link = `${appUrl}/${storeSlug}`;
+    // Link do WhatsApp da loja - funciona em qualquer celular
+    const phone = '5511999999999'; // TODO: pegar do banco
+    const message = encodeURIComponent('Olá! Vi o QR Code e quero fazer um pedido 🍔');
+    const link = `https://wa.me/${phone}?text=${message}`;
 
     const qrBase64 = await QRCode.toDataURL(link, {
       width: 400,

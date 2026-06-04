@@ -1,7 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import Image from 'next/image';
+import {
+  Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2, AlertTriangle,
+  Smartphone, QrCode, Copy, CheckCircle2, RefreshCw, Link, Power, ShieldCheck
+} from 'lucide-react';
 
 interface KeywordResponse {
   id: string;
@@ -19,6 +23,8 @@ const DEFAULT_KEYWORDS: KeywordResponse[] = [
 
 export default function RobotPage() {
   const [enabled, setEnabled] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(
     '👋 Olá! Bem-vindo ao *{nome_loja}*!\n\nSou seu assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?'
   );
@@ -26,22 +32,47 @@ export default function RobotPage() {
   const [orderStatusTemplate, setOrderStatusTemplate] = useState(
     '📦 *Status do Pedido #{pedido_id}*\n\n🛍️ Cliente: {cliente_nome}\n📍 Endereço: {endereco}\n\n📋 Itens:\n{itens_pedido}\n\n💰 Total: R$ {total}\n💳 Pagamento: {forma_pagamento}\n\n📊 Status: *{status}*\n⏰ Atualizado em: {data_hora}'
   );
+
+  // Keyword editing state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editKw, setEditKw] = useState('');
+  const [editResp, setEditResp] = useState('');
+
   const [newKeyword, setNewKeyword] = useState('');
   const [newResponse, setNewResponse] = useState('');
 
+  function startEdit(kw: KeywordResponse) {
+    setEditingId(kw.id);
+    setEditKw(kw.keywords);
+    setEditResp(kw.response);
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    setKeywords(prev => prev.map(k => k.id === editingId ? { ...k, keywords: editKw, response: editResp } : k));
+    setEditingId(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditKw('');
+    setEditResp('');
+  }
+
   function addKeyword() {
     if (!newKeyword.trim() || !newResponse.trim()) return;
-    setKeywords([...keywords, { id: Date.now().toString(), keywords: newKeyword, response: newResponse }]);
+    setKeywords(prev => [...prev, { id: Date.now().toString(), keywords: newKeyword, response: newResponse }]);
     setNewKeyword('');
     setNewResponse('');
   }
 
   function removeKeyword(id: string) {
-    setKeywords(keywords.filter(k => k.id !== id));
+    setKeywords(prev => prev.filter(k => k.id !== id));
   }
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">Robô WhatsApp</h1>
@@ -60,12 +91,123 @@ export default function RobotPage() {
         </button>
       </div>
 
-      {!enabled && (
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-          <p className="text-sm text-yellow-400">Ative o robô para começar a atender seus clientes automaticamente no WhatsApp.</p>
+      {/* WhatsApp Connection */}
+      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Smartphone className="h-4 w-4 text-[#ff9607]" />
+          <h3 className="font-bold text-sm">Conectar WhatsApp</h3>
         </div>
-      )}
+
+        {!connected ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <Power className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">Status: Desconectado</p>
+                <p className="text-xs text-gray-500">Conecte seu WhatsApp para o robô começar a atender</p>
+              </div>
+            </div>
+
+            {!showQr ? (
+              <button
+                onClick={() => setShowQr(true)}
+                className="w-full py-3 bg-[#ff9607] text-black rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2"
+              >
+                <QrCode className="h-4 w-4" /> Gerar QR Code
+              </button>
+            ) : (
+              <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl">
+                <div className="w-52 h-52 bg-white rounded-xl flex items-center justify-center relative overflow-hidden">
+                  {/* Simulated QR Code */}
+                  <div className="grid grid-cols-7 grid-rows-7 gap-0.5 w-44 h-44 p-2">
+                    {Array.from({ length: 49 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`${
+                          [0,1,2,3,4,5,6,7,13,14,20,21,27,28,34,35,41,42,43,44,45,46,47,48,8,16,24,32,40,12,18,24,30,36].includes(i)
+                            ? 'bg-zinc-900'
+                            : 'bg-white'
+                        }`}
+                      />
+                    ))}
+                    {/* Corner markers */}
+                    <div className="absolute top-2.5 left-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
+                      <div className="w-5 h-5 bg-zinc-900" />
+                    </div>
+                    <div className="absolute top-2.5 right-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
+                      <div className="w-5 h-5 bg-zinc-900" />
+                    </div>
+                    <div className="absolute bottom-2.5 left-2.5 w-10 h-10 border-4 border-zinc-900 bg-white flex items-center justify-center">
+                      <div className="w-5 h-5 bg-zinc-900" />
+                    </div>
+                  </div>
+                  {/* WhatsApp icon overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <Smartphone className="h-5 w-5 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium">Escaneie com o WhatsApp</p>
+                  <p className="text-xs text-gray-500">Abra o WhatsApp no celular → Configurações → Aparelhos conectados → Conectar aparelho</p>
+                </div>
+
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => setShowQr(false)}
+                    className="flex-1 py-2.5 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => { setConnected(true); setShowQr(false); }}
+                    className="flex-1 py-2.5 bg-green-500 text-black rounded-xl text-sm font-bold hover:bg-green-400 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Simular Conexão
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-green-500/5 border border-green-500/10 rounded-xl">
+              <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-400">WhatsApp Conectado</p>
+                <p className="text-xs text-gray-500">+55 11 99999-9999 · Última sincronização: agora</p>
+              </div>
+              <button
+                onClick={() => setConnected(false)}
+                className="px-3 py-1.5 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+              >
+                Desconectar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/5 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[#ff9607]">1.247</p>
+                <p className="text-xs text-gray-500">Mensagens enviadas</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-green-400">98%</p>
+                <p className="text-xs text-gray-500">Taxa de resposta</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-blue-400">2s</p>
+                <p className="text-xs text-gray-500">Tempo médio de resposta</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Welcome Message */}
       <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
@@ -82,7 +224,8 @@ export default function RobotPage() {
         />
         <div className="flex flex-wrap gap-1.5 mt-2">
           {['{nome_loja}', '{link_cardapio}', '{horario_funcionamento}', '{telefone}'].map(tag => (
-            <span key={tag} className="text-[10px] bg-[#ff9607]/10 text-[#ff9607] px-1.5 py-0.5 rounded font-mono">{tag}</span>
+            <span key={tag} className="text-[10px] bg-[#ff9607]/10 text-[#ff9607] px-1.5 py-0.5 rounded font-mono cursor-pointer hover:bg-[#ff9607]/20 transition-colors"
+              onClick={() => setWelcomeMessage(prev => prev + ' ' + tag)}>{tag}</span>
           ))}
         </div>
       </div>
@@ -102,7 +245,8 @@ export default function RobotPage() {
         />
         <div className="flex flex-wrap gap-1.5 mt-2">
           {['{pedido_id}', '{cliente_nome}', '{endereco}', '{itens_pedido}', '{total}', '{forma_pagamento}', '{status}', '{data_hora}'].map(tag => (
-            <span key={tag} className="text-[10px] bg-[#ff9607]/10 text-[#ff9607] px-1.5 py-0.5 rounded font-mono">{tag}</span>
+            <span key={tag} className="text-[10px] bg-[#ff9607]/10 text-[#ff9607] px-1.5 py-0.5 rounded font-mono cursor-pointer hover:bg-[#ff9607]/20 transition-colors"
+              onClick={() => setOrderStatusTemplate(prev => prev + ' ' + tag)}>{tag}</span>
           ))}
         </div>
       </div>
@@ -111,25 +255,66 @@ export default function RobotPage() {
       <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-3">
           <Bot className="h-4 w-4 text-[#ff9607]" />
-          <h3 className="font-bold text-sm">Palavras-chave e Respostas</h3>
+          <h3 className="font-bold text-sm">Palavras-chave e Respostas Automáticas</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-4">Configure palavras-chave que o robô vai reconhecer e as respostas automáticas.</p>
+        <p className="text-xs text-gray-500 mb-4">Configure palavras-chave que o robô vai reconhecer e as respostas automáticas. Clique no lápis para editar.</p>
 
         <div className="space-y-3 mb-4">
           {keywords.map(kw => (
-            <div key={kw.id} className="bg-black/30 border border-white/5 rounded-xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-[#ff9607]">{kw.keywords}</span>
-                <button onClick={() => removeKeyword(kw.id)} className="text-gray-500 hover:text-red-400">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-400 whitespace-pre-wrap">{kw.response}</p>
+            <div key={kw.id} className="bg-black/30 border border-white/5 rounded-xl overflow-hidden">
+              {editingId === kw.id ? (
+                <div className="p-3 space-y-2">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Palavras-chave (separadas por vírgula)</label>
+                    <input
+                      value={editKw}
+                      onChange={e => setEditKw(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Resposta automática</label>
+                    <textarea
+                      value={editResp}
+                      onChange={e => setEditResp(e.target.value)}
+                      rows={3}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-[#ff9607] resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={saveEdit} className="flex items-center gap-1 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs hover:bg-green-500/20 transition-colors">
+                      <CheckCircle2 className="h-3 w-3" /> Salvar
+                    </button>
+                    <button onClick={cancelEdit} className="px-3 py-1.5 bg-white/5 text-gray-400 rounded-lg text-xs hover:bg-white/10 transition-colors">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-[#ff9607] bg-[#ff9607]/10 px-2 py-0.5 rounded">{kw.keywords}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(kw)} className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors rounded-lg hover:bg-white/5">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => removeKeyword(kw.id)} className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 whitespace-pre-wrap">{kw.response}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        <div className="space-y-2">
+        {/* Add new keyword */}
+        <div className="border-t border-white/5 pt-4 space-y-2">
+          <p className="text-xs font-medium text-gray-500">Adicionar nova palavra-chave</p>
           <input
             value={newKeyword}
             onChange={e => setNewKeyword(e.target.value)}
@@ -154,24 +339,21 @@ export default function RobotPage() {
 
       {/* Feedback Settings */}
       <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
-        <h3 className="font-bold text-sm mb-3">Feedback dos Clientes</h3>
+        <h3 className="font-bold text-sm mb-3">Configurações de Notificação</h3>
         <div className="space-y-3">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 accent-[#ff9607]" defaultChecked />
-            <span className="text-sm text-gray-300">Solicitar avaliação após entrega</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 accent-[#ff9607]" defaultChecked />
-            <span className="text-sm text-gray-300">Enviar comprovante de pagamento no WhatsApp</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 accent-[#ff9607]" />
-            <span className="text-sm text-gray-300">Notificar status do pedido em tempo real</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 accent-[#ff9607]" />
-            <span className="text-sm text-gray-300">Informar tempo estimado de entrega automaticamente</span>
-          </label>
+          {[
+            { label: 'Solicitar avaliação após entrega', defaultChecked: true },
+            { label: 'Enviar comprovante de pagamento no WhatsApp', defaultChecked: true },
+            { label: 'Notificar status do pedido em tempo real', defaultChecked: false },
+            { label: 'Informar tempo estimado de entrega automaticamente', defaultChecked: false },
+            { label: 'Enviar mensagem quando o pedido sair para entrega', defaultChecked: true },
+            { label: 'Enviar lembrete de pedido abandonado no carrinho', defaultChecked: false },
+          ].map((item, i) => (
+            <label key={i} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
+              <input type="checkbox" defaultChecked={item.defaultChecked} className="w-4 h-4 accent-[#ff9607]" />
+              <span className="text-sm text-gray-300">{item.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 

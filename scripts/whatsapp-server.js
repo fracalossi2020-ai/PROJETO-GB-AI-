@@ -2,97 +2,108 @@ const { default: makeWASocket, DisconnectReason, useMultiFileAuthState, Browsers
 const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
-const { Boom } = require('@hapi/boom');
 
 const STATUS_FILE = path.join(__dirname, '..', 'prisma', 'whatsapp-status.json');
 const AUTH_DIR = path.join(__dirname, '..', 'prisma', 'baileys-auth');
 
 if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
 
-let sock = null;
+let currentQr = null;
+let isConnected = false;
+let currentPhone = null;
 
-function saveStatus(status) {
-  fs.writeFileSync(STATUS_FILE, JSON.stringify(status, null, 2));
+function saveStatus() {
+  try {
+    fs.writeFileSync(STATUS_FILE, JSON.stringify({
+      qr: currentQr,
+      connected: isConnected,
+      phone: currentPhone,
+      state: isConnected ? 'connected' : (currentQr ? 'qr' : 'connecting'),
+      message: isConnected ? `Conectado: ${currentPhone || ''}` : (currentQr ? 'Escaneie o QR Code com o WhatsApp' : 'Gerando QR Code...'),
+      updatedAt: new Date().toISOString(),
+    }, null, 2));
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao salvar status:', e.message);
+  }
 }
 
 async function start() {
   console.log('[WhatsApp] Iniciando servidor...');
-
-  saveStatus({ qr: null, connected: false, phone: null, state: 'connecting', message: 'Gerando QR Code...' });
+  saveStatus();
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-  sock = makeWASocket({
+  const sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
+    // Aumenta o tempo de pairing
+    qrMaxRetries: 10,
   });
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      const qrBase64 = await QRCode.toDataURL(qr, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-      saveStatus({ qr: qrBase64, connected: false, phone: null, state: 'qr', message: 'Escaneie o QR Code com o WhatsApp' });
-      console.log('[WhatsApp] QR Code gerado! Escaneie para conectar.');
+      try {
+        currentQr = await QRCode.toDataURL(qr, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+        console.log('[WhatsApp] QR Code gerado! Escaneie para conectar.');
+        saveStatus();
+      } catch (e) {
+        console.error('[WhatsApp] Erro ao gerar QR:', e.message);
+      }
     }
 
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error instanceof Boom)
-        ? lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
-        : true;
-
-      saveStatus({ qr: null, connected: false, phone: null, state: 'disconnected', message: 'Desconectado' });
-      console.log('[WhatsApp] Conexão fechada.');
-
-      sock = null;
+      const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
+      console.log('[WhatsApp] Conexão fechada. Reconectar:', shouldReconnect);
+      currentQr = null;
+      isConnected = false;
+      currentPhone = null;
+      saveStatus();
       if (shouldReconnect) {
-        console.log('[WhatsApp] Reconectando em 3s...');
         setTimeout(start, 3000);
       }
     } else if (connection === 'open') {
-      // Pega o número do WhatsApp conectado
       const userJid = sock.user?.id;
-      const phone = userJid ? userJid.split(':')[0].split('@')[0] : null;
-
-      saveStatus({
-        qr: null,
-        connected: true,
-        phone: phone || 'Desconhecido',
-        state: 'connected',
-        message: `Conectado: ${phone || 'Desconhecido'}`,
-      });
-      console.log(`[WhatsApp] Conectado! Número: ${phone || 'Desconhecido'}`);
+      currentPhone = userJid ? userJid.split(':')[0].split('@')[0] : null;
+      isConnected = true;
+      currentQr = null;
+      console.log(`[WhatsApp] Conectado! Número: ${currentPhone || 'Desconhecido'}`);
+      saveStatus();
     }
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Handler de mensagens recebidas (para o robô responder)
+  // Respostas automáticas
   sock.ev.on('messages.upsert', async (m) => {
-    if (m.type === 'notify') {
-      for (const msg of m.messages) {
-        if (!msg.key.fromMe && msg.message?.conversation) {
-          const text = msg.message.conversation.toLowerCase();
-          console.log(`[WhatsApp] Mensagem recebida de ${msg.key.remoteJid}: ${text}`);
+    if (m.type !== 'notify') return;
+    for (const msg of m.messages) {
+      if (msg.key.fromMe) continue;
+      const text = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase();
+      if (!text) continue;
 
-          // Respostas automáticas simples
-          let reply = null;
-          if (text.includes('oi') || text.includes('olá') || text.includes('ola')) {
-            reply = '👋 Olá! Bem-vindo! Sou o robô do GB.AI. Como posso te ajudar?\n\nEnvie:\n• *cardápio* - Ver nosso cardápio\n• *horário* - Horário de funcionamento\n• *pedido* - Status do seu pedido';
-          } else if (text.includes('cardápio') || text.includes('menu')) {
-            reply = '📋 Acesse nosso cardápio:\nhttp://localhost:3000/burger-king-gb\n\nQual item te interessa?';
-          } else if (text.includes('horário') || text.includes('hora')) {
-            reply = '⏰ Funcionamos de Segunda a Domingo das 08:00 às 22:00.';
-          } else if (text.includes('pedido') || text.includes('status')) {
-            reply = '📦 Para verificar seu pedido, acesse:\nhttp://localhost:3000/pedido/[seu-numero]';
-          }
+      console.log(`[WhatsApp] Msg de ${msg.key.remoteJid}: ${text}`);
 
-          if (reply) {
-            await sock.sendMessage(msg.key.remoteJid, { text: reply });
-            console.log(`[WhatsApp] Resposta enviada: ${reply.substring(0, 50)}...`);
-          }
-        }
+      let reply = null;
+      if (text.includes('oi') || text.includes('olá') || text.includes('ola') || text.includes('bom dia') || text.includes('boa tarde') || text.includes('boa noite')) {
+        reply = '👋 Olá! Bem-vindo! Sou o robô do GB.AI.\n\nEnvie:\n• *cardápio* - Ver nosso cardápio\n• *horário* - Horário de funcionamento\n• *pedido* - Status do pedido';
+      } else if (text.includes('cardápio') || text.includes('menu') || text.includes('cardapio')) {
+        reply = '📋 Acesse nosso cardápio:\nhttp://localhost:3000/burger-king-gb\n\nQual item te interessa?';
+      } else if (text.includes('horário') || text.includes('hora') || text.includes('horario')) {
+        reply = '⏰ Funcionamos todos os dias das 08:00 às 22:00.';
+      } else if (text.includes('pedido') || text.includes('status')) {
+        reply = '📦 Para verificar seu pedido, acesse:\nhttp://localhost:3000/pedido/[numero]';
+      } else if (text.includes('entrega') || text.includes('frete')) {
+        reply = '🛵 Taxa de entrega: R$ 5,00\nTempo estimado: 25-45 minutos\n\nÁreas atendidas consulte no site.';
+      } else if (text.includes('pix') || text.includes('pagamento')) {
+        reply = '💳 Aceitamos:\n✅ PIX\n✅ Dinheiro\n✅ Cartão de Crédito/Débito\n\nChave PIX: admin@gbai.com';
+      }
+
+      if (reply) {
+        await sock.sendMessage(msg.key.remoteJid, { text: reply });
+        console.log(`[WhatsApp] Resposta enviada.`);
       }
     }
   });
@@ -100,9 +111,8 @@ async function start() {
 
 start();
 
-// Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n[WhatsApp] Desligando...');
-  saveStatus({ qr: null, connected: false, phone: null, state: 'stopped', message: 'Servidor parado' });
+  fs.writeFileSync(STATUS_FILE, JSON.stringify({ qr: null, connected: false, phone: null, state: 'stopped', message: 'Servidor parado' }, null, 2));
   process.exit(0);
 });

@@ -68,7 +68,7 @@ export default function RobotPage() {
     }
 
     checkStatus();
-    interval = setInterval(checkStatus, 3000);
+    interval = setInterval(checkStatus, 1500);
     return () => clearInterval(interval);
   }, [enabled]);
 
@@ -195,11 +195,14 @@ export default function RobotPage() {
                 </div>
 
                 <div className="text-center space-y-2">
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+                    <p className="text-sm font-bold text-red-400">⏱️ QR Code atualiza automaticamente!</p>
+                    <p className="text-xs text-gray-400 mt-1">Escaneie RÁPIDO — o QR code muda a cada 20 segundos</p>
+                  </div>
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2">
                     <p className="text-sm font-bold text-green-400">📱 Escaneie dentro do WhatsApp</p>
                     <p className="text-xs text-gray-400 mt-1">Abra o WhatsApp → Configurações → Aparelhos Conectados → Conectar Aparelho</p>
                   </div>
-                  <p className="text-xs text-gray-500">Aguardando conexão... O robô ativará automaticamente.</p>
                 </div>
 
                 <button

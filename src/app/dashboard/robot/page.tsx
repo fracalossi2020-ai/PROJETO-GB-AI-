@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Bot, MessageSquare, Send, Save, ToggleLeft, ToggleRight, Plus, Trash2,
   Smartphone, QrCode, CheckCircle2, Power, ShieldCheck, Pencil, RefreshCw,
-  Copy, ExternalLink
+  Copy, ExternalLink, AlertTriangle
 } from 'lucide-react';
 
 interface KeywordResponse {
   id: string;
   keywords: string;
   response: string;
+}
+
+interface WpStatus {
+  qr: string | null;
+  connected: boolean;
+  phone: string | null;
+  state: string;
+  message: string;
 }
 
 const DEFAULT_KEYWORDS: KeywordResponse[] = [
@@ -23,10 +31,8 @@ const DEFAULT_KEYWORDS: KeywordResponse[] = [
 
 export default function RobotPage() {
   const [enabled, setEnabled] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [qrLink, setQrLink] = useState('');
-  const [loadingQr, setLoadingQr] = useState(false);
+  const [wpStatus, setWpStatus] = useState<WpStatus | null>(null);
+  const [loading, setLoading] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(
     '👋 Olá! Bem-vindo ao *{nome_loja}*!\n\nSou seu assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?'
   );
@@ -35,27 +41,49 @@ export default function RobotPage() {
     '📦 *Status do Pedido #{pedido_id}*\n\n🛍️ Cliente: {cliente_nome}\n📍 Endereço: {endereco}\n\n📋 Itens:\n{itens_pedido}\n\n💰 Total: R$ {total}\n💳 Pagamento: {forma_pagamento}\n\n📊 Status: *{status}*\n⏰ Atualizado em: {data_hora}'
   );
 
-  // Keyword editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editKw, setEditKw] = useState('');
   const [editResp, setEditResp] = useState('');
-
   const [newKeyword, setNewKeyword] = useState('');
   const [newResponse, setNewResponse] = useState('');
 
+  // Polling do status do WhatsApp
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+        if (data.success) {
+          setWpStatus(data.data);
+          // Se conectou, ativa o robô automaticamente
+          if (data.data.connected && !enabled) {
+            setEnabled(true);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    checkStatus();
+    interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [enabled]);
+
   async function generateQr() {
-    setLoadingQr(true);
+    setLoading(true);
     try {
       const res = await fetch('/api/whatsapp/qr');
       const data = await res.json();
       if (data.success) {
-        setQrCode(data.data.qrCode);
-        setQrLink(data.data.link);
+        setWpStatus(data.data);
       }
     } catch {
       // ignore
     } finally {
-      setLoadingQr(false);
+      setLoading(false);
     }
   }
 
@@ -88,6 +116,10 @@ export default function RobotPage() {
     setKeywords(prev => prev.filter(k => k.id !== id));
   }
 
+  const phoneDisplay = wpStatus?.phone
+    ? wpStatus.phone.startsWith('55') ? `+${wpStatus.phone}` : wpStatus.phone
+    : null;
+
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
       {/* Header */}
@@ -96,17 +128,26 @@ export default function RobotPage() {
           <h1 className="text-xl font-bold">Robô WhatsApp</h1>
           <p className="text-gray-400 text-sm">Automatize o atendimento ao cliente via WhatsApp</p>
         </div>
-        <button
-          onClick={() => setEnabled(!enabled)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-            enabled
-              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-          }`}
-        >
-          {enabled ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-          {enabled ? 'Robô Ativo' : 'Robô Desativado'}
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Status badge */}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold border ${
+            wpStatus?.connected
+              ? 'bg-green-500/10 text-green-400 border-green-500/20'
+              : enabled
+                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                : 'bg-red-500/10 text-red-400 border-red-500/20'
+          }`}>
+            {wpStatus?.connected ? <ShieldCheck className="h-4 w-4" /> : enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+            {wpStatus?.connected ? 'Conectado' : enabled ? 'Robô Ativo' : 'Desconectado'}
+          </div>
+          {/* Phone number */}
+          {phoneDisplay && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#ff9607]/10 text-[#ff9607] rounded-xl text-sm font-bold border border-[#ff9607]/20">
+              <Smartphone className="h-4 w-4" />
+              {phoneDisplay}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* WhatsApp Connection */}
@@ -116,91 +157,68 @@ export default function RobotPage() {
           <h3 className="font-bold text-sm">Conectar WhatsApp</h3>
         </div>
 
-        {!connected ? (
+        {!wpStatus?.connected ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+            <div className="flex items-center gap-3 p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
               <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
                 <Power className="h-5 w-5 text-red-400" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Status: Desconectado</p>
-                <p className="text-xs text-gray-500">Gere o QR Code e escaneie com o WhatsApp do estabelecimento</p>
+                <p className="text-sm font-medium">WhatsApp desconectado</p>
+                <p className="text-xs text-gray-500">
+                  {wpStatus?.state === 'offline'
+                    ? 'Inicie o servidor WhatsApp no terminal: node scripts/whatsapp-server.js'
+                    : 'Gere o QR Code e escaneie com o WhatsApp'}
+                </p>
               </div>
             </div>
 
-            {!qrCode ? (
-              <button
-                onClick={generateQr}
-                disabled={loadingQr}
-                className="w-full py-3 bg-[#ff9607] text-black rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loadingQr ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <QrCode className="h-4 w-4" />
-                )}
-                {loadingQr ? 'Gerando...' : 'Gerar QR Code'}
-              </button>
-            ) : (
+            {wpStatus?.state === 'offline' && (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-400">Servidor WhatsApp não iniciado</p>
+                    <p className="text-xs text-gray-400 mt-1">Para conectar seu WhatsApp, abra um terminal separado e rode:</p>
+                    <code className="block mt-2 bg-black/40 rounded-lg px-3 py-2 text-xs font-mono text-green-400">
+                      node scripts/whatsapp-server.js
+                    </code>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {wpStatus?.qr ? (
               <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl">
-                {/* QR Code Image */}
                 <div className="bg-white p-3 rounded-xl">
-                  <img src={qrCode} alt="QR Code WhatsApp" className="w-52 h-52" />
+                  <img src={wpStatus.qr} alt="QR Code WhatsApp" className="w-52 h-52" />
                 </div>
 
                 <div className="text-center space-y-2">
-                  <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-lg p-2">
-                    <p className="text-sm font-bold text-[#ff9607]">📱 Escaneie com a CÂMERA do celular</p>
-                    <p className="text-xs text-gray-400 mt-1">Não escaneie dentro do WhatsApp. Use a câmera do celular mesmo!</p>
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2">
+                    <p className="text-sm font-bold text-green-400">📱 Escaneie dentro do WhatsApp</p>
+                    <p className="text-xs text-gray-400 mt-1">Abra o WhatsApp → Configurações → Aparelhos Conectados → Conectar Aparelho</p>
                   </div>
-                  <p className="text-xs text-gray-500">Ao escanear, o WhatsApp abre com a mensagem pré-preenchida</p>
+                  <p className="text-xs text-gray-500">Aguardando conexão... O robô ativará automaticamente.</p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2 w-full">
-                  <input
-                    value={qrLink}
-                    readOnly
-                    className="flex-1 bg-transparent text-xs text-gray-400 outline-none"
-                  />
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(qrLink); }}
-                    className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors"
-                    title="Copiar link"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                  <a
-                    href={qrLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors"
-                    title="Abrir link"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-
-                <div className="flex gap-2 w-full">
-                  <button
-                    onClick={() => setQrCode(null)}
-                    className="flex-1 py-2.5 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors"
-                  >
-                    Fechar
-                  </button>
-                  <button
-                    onClick={generateQr}
-                    className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Novo QR
-                  </button>
-                  <button
-                    onClick={() => { setConnected(true); setEnabled(true); }}
-                    className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-green-500 text-black rounded-xl text-sm font-bold hover:bg-green-400 transition-colors"
-                  >
-                    <CheckCircle2 className="h-4 w-4" /> Conectar
-                  </button>
-                </div>
+                <button
+                  onClick={generateQr}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar QR
+                </button>
               </div>
+            ) : (
+              <button
+                onClick={generateQr}
+                disabled={loading}
+                className="w-full py-3 bg-[#ff9607] text-black rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
+                {loading ? 'Gerando...' : 'Gerar QR Code'}
+              </button>
             )}
           </div>
         ) : (
@@ -211,13 +229,13 @@ export default function RobotPage() {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-green-400">WhatsApp Conectado</p>
-                <p className="text-xs text-gray-500">Robô ativo e respondendo mensagens automaticamente</p>
+                <p className="text-xs text-gray-500">{phoneDisplay} · Robô ativo e respondendo</p>
               </div>
               <button
-                onClick={() => { setConnected(false); setEnabled(false); }}
+                onClick={() => { setEnabled(false); }}
                 className="px-3 py-1.5 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
               >
-                Desconectar
+                Desativar Robô
               </button>
             </div>
 
@@ -287,7 +305,7 @@ export default function RobotPage() {
           <Bot className="h-4 w-4 text-[#ff9607]" />
           <h3 className="font-bold text-sm">Palavras-chave e Respostas Automáticas</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-4">Configure palavras-chave que o robô vai reconhecer e as respostas automáticas. Clique no lápis para editar.</p>
+        <p className="text-xs text-gray-500 mb-4">Configure palavras-chave que o robô vai reconhecer. Clique no lápis para editar.</p>
 
         <div className="space-y-3 mb-4">
           {keywords.map(kw => (
@@ -323,9 +341,7 @@ export default function RobotPage() {
               ) : (
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-[#ff9607] bg-[#ff9607]/10 px-2 py-0.5 rounded">{kw.keywords}</span>
-                    </div>
+                    <span className="text-xs font-medium text-[#ff9607] bg-[#ff9607]/10 px-2 py-0.5 rounded">{kw.keywords}</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => startEdit(kw)} className="p-1.5 text-gray-500 hover:text-[#ff9607] transition-colors rounded-lg hover:bg-white/5">
                         <Pencil className="h-3.5 w-3.5" />
@@ -342,7 +358,6 @@ export default function RobotPage() {
           ))}
         </div>
 
-        {/* Add new keyword */}
         <div className="border-t border-white/5 pt-4 space-y-2">
           <p className="text-xs font-medium text-gray-500">Adicionar nova palavra-chave</p>
           <input
@@ -364,26 +379,6 @@ export default function RobotPage() {
           >
             <Plus className="h-4 w-4" /> Adicionar palavra-chave
           </button>
-        </div>
-      </div>
-
-      {/* Feedback Settings */}
-      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
-        <h3 className="font-bold text-sm mb-3">Configurações de Notificação</h3>
-        <div className="space-y-3">
-          {[
-            { label: 'Solicitar avaliação após entrega', defaultChecked: true },
-            { label: 'Enviar comprovante de pagamento no WhatsApp', defaultChecked: true },
-            { label: 'Notificar status do pedido em tempo real', defaultChecked: false },
-            { label: 'Informar tempo estimado de entrega automaticamente', defaultChecked: false },
-            { label: 'Enviar mensagem quando o pedido sair para entrega', defaultChecked: true },
-            { label: 'Enviar lembrete de pedido abandonado no carrinho', defaultChecked: false },
-          ].map((item, i) => (
-            <label key={i} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/5 transition-colors">
-              <input type="checkbox" defaultChecked={item.defaultChecked} className="w-4 h-4 accent-[#ff9607]" />
-              <span className="text-sm text-gray-300">{item.label}</span>
-            </label>
-          ))}
         </div>
       </div>
 

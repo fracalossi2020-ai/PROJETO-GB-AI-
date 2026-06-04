@@ -9,15 +9,23 @@ export async function GET() {
     if (!fs.existsSync(STATUS_FILE)) {
       return NextResponse.json({
         success: false,
-        data: { qr: null, connected: false, phone: null, state: 'offline', message: 'Servidor WhatsApp não iniciado' },
+        data: { connected: false, phone: null, state: 'offline' },
       });
     }
 
     const status = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf-8'));
-    return NextResponse.json({ success: true, data: status });
+    return NextResponse.json({
+      success: true,
+      data: {
+        connected: status.connected,
+        phone: status.phone,
+        state: status.state,
+        message: status.message,
+      },
+    });
   } catch {
     return NextResponse.json(
-      { success: false, error: 'Erro ao ler status do WhatsApp' },
+      { success: false, error: 'Erro ao ler status' },
       { status: 500 }
     );
   }

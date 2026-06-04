@@ -194,10 +194,10 @@ export default function RobotPage() {
                     <RefreshCw className="h-3.5 w-3.5" /> Novo QR
                   </button>
                   <button
-                    onClick={() => setConnected(true)}
+                    onClick={() => { setConnected(true); setEnabled(true); }}
                     className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-green-500 text-black rounded-xl text-sm font-bold hover:bg-green-400 transition-colors"
                   >
-                    <CheckCircle2 className="h-4 w-4" /> Conectado
+                    <CheckCircle2 className="h-4 w-4" /> Conectar
                   </button>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function RobotPage() {
                 <p className="text-xs text-gray-500">Robô ativo e respondendo mensagens automaticamente</p>
               </div>
               <button
-                onClick={() => setConnected(false)}
+                onClick={() => { setConnected(false); setEnabled(false); }}
                 className="px-3 py-1.5 text-xs bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
               >
                 Desconectar

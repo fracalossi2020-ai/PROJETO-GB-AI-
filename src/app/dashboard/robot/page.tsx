@@ -148,9 +148,12 @@ export default function RobotPage() {
                   <img src={qrCode} alt="QR Code WhatsApp" className="w-52 h-52" />
                 </div>
 
-                <div className="text-center space-y-1">
-                  <p className="text-sm font-medium">Escaneie com o WhatsApp</p>
-                  <p className="text-xs text-gray-500">Abra o WhatsApp no celular → Configurações → Aparelhos conectados → Conectar aparelho</p>
+                <div className="text-center space-y-2">
+                  <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-lg p-2">
+                    <p className="text-sm font-bold text-[#ff9607]">⚠️ Escaneie com a CÂMERA do celular</p>
+                    <p className="text-xs text-gray-400 mt-1">NÃO escaneie dentro do WhatsApp. Use a câmera do celular mesmo!</p>
+                  </div>
+                  <p className="text-xs text-gray-500">Ao escanear, o WhatsApp abre com a mensagem pré-preenchida</p>
                 </div>
 
                 <div className="flex items-center gap-2 bg-black/30 rounded-lg px-3 py-2 w-full">

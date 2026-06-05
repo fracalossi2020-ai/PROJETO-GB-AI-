@@ -32,6 +32,7 @@ const DEFAULT_KEYWORDS: KeywordResponse[] = [
 export default function RobotPage() {
   const [enabled, setEnabled] = useState(false);
   const [wpStatus, setWpStatus] = useState<WpStatus | null>(null);
+  const [lastQrCode, setLastQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(
     '👋 Olá! Bem-vindo ao *{nome_loja}*!\n\nSou seu assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?'
@@ -57,6 +58,10 @@ export default function RobotPage() {
         const data = await res.json();
         if (data.success) {
           setWpStatus(data.data);
+          // Guarda o último QR code para nunca sumir da tela
+          if (data.data.qr) {
+            setLastQrCode(data.data.qr);
+          }
           // Se conectou, ativa o robô automaticamente
           if (data.data.connected && !enabled) {
             setEnabled(true);
@@ -79,6 +84,9 @@ export default function RobotPage() {
       const data = await res.json();
       if (data.success) {
         setWpStatus(data.data);
+        if (data.data.qr) {
+          setLastQrCode(data.data.qr);
+        }
       }
     } catch {
       // ignore
@@ -188,10 +196,10 @@ export default function RobotPage() {
               </div>
             )}
 
-            {wpStatus?.qr ? (
+            {lastQrCode ? (
               <div className="flex flex-col items-center gap-4 p-4 bg-white/5 rounded-xl">
                 <div className="bg-white p-3 rounded-xl">
-                  <img src={wpStatus.qr} alt="QR Code WhatsApp" className="w-52 h-52" />
+                  <img src={lastQrCode} alt="QR Code WhatsApp" className="w-52 h-52" />
                 </div>
 
                 <div className="text-center space-y-2">

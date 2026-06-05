@@ -37,7 +37,6 @@ async function start() {
     auth: state,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
-    // Tenta indefinidamente — sempre gera novo QR quando expira
     qrMaxRetries: Infinity,
     connectTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
@@ -59,12 +58,13 @@ async function start() {
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
       console.log('[WhatsApp] Conexão fechada. Reconectar:', shouldReconnect);
-      currentQr = null;
       isConnected = false;
       currentPhone = null;
+      // IMPORTANTE: NÃO limpa currentQr — mantém o último QR visível até o novo ser gerado
       saveStatus();
-      // Sempre reconecta para gerar novo QR code
-      setTimeout(start, 2000);
+      if (shouldReconnect) {
+        setTimeout(start, 2000);
+      }
     } else if (connection === 'open') {
       const userJid = sock.user?.id;
       currentPhone = userJid ? userJid.split(':')[0].split('@')[0] : null;
@@ -77,15 +77,12 @@ async function start() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Respostas automáticas
   sock.ev.on('messages.upsert', async (m) => {
     if (m.type !== 'notify') return;
     for (const msg of m.messages) {
       if (msg.key.fromMe) continue;
       const text = msg.message?.conversation?.toLowerCase() || msg.message?.extendedTextMessage?.text?.toLowerCase();
       if (!text) continue;
-
-      console.log(`[WhatsApp] Msg de ${msg.key.remoteJid}: ${text}`);
 
       let reply = null;
       if (text.includes('oi') || text.includes('olá') || text.includes('ola') || text.includes('bom dia') || text.includes('boa tarde') || text.includes('boa noite')) {
@@ -97,14 +94,13 @@ async function start() {
       } else if (text.includes('pedido') || text.includes('status')) {
         reply = '📦 Para verificar seu pedido, acesse:\nhttp://localhost:3000/pedido/[numero]';
       } else if (text.includes('entrega') || text.includes('frete')) {
-        reply = '🛵 Taxa de entrega: R$ 5,00\nTempo estimado: 25-45 minutos\n\nÁreas atendidas consulte no site.';
+        reply = '🛵 Taxa de entrega: R$ 5,00\nTempo estimado: 25-45 minutos';
       } else if (text.includes('pix') || text.includes('pagamento')) {
         reply = '💳 Aceitamos:\n✅ PIX\n✅ Dinheiro\n✅ Cartão de Crédito/Débito\n\nChave PIX: admin@gbai.com';
       }
 
       if (reply) {
         await sock.sendMessage(msg.key.remoteJid, { text: reply });
-        console.log(`[WhatsApp] Resposta enviada.`);
       }
     }
   });

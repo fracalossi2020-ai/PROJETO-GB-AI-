@@ -13,7 +13,8 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Sparkles, Check, ArrowLeft, ChevronDown, ChevronRight,
   Loader2, ShoppingBag, UtensilsCrossed, GripVertical, Pencil,
-  Trash2, Plus, X, AlertTriangle
+  Trash2, Plus, X, AlertTriangle, Eye, EyeOff, ShoppingCart,
+  Star, Clock, Phone, MapPin, Search, ChevronUp
 } from 'lucide-react';
 import { AI_TEMPLATES, TEMPLATE_META } from '@/lib/ai-templates';
 
@@ -34,6 +35,150 @@ interface DraftCategory {
   id: string;
   name: string;
   products: DraftProduct[];
+}
+
+/* ---------- Client Preview Component ---------- */
+function ClientPreview({ draft, storeName }: { draft: DraftCategory[]; storeName: string }) {
+  const [activeCat, setActiveCat] = useState<string>(draft[0]?.id || '');
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const totalCart = Object.values(cart).reduce((s, v) => s + v, 0);
+
+  const filteredDraft = searchQuery.trim()
+    ? draft.map(c => ({ ...c, products: c.products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())) })).filter(c => c.products.length > 0)
+    : draft;
+
+  function addToCart(prodId: string) {
+    setCart(prev => ({ ...prev, [prodId]: (prev[prodId] || 0) + 1 }));
+  }
+
+  function getEmoji(name: string) {
+    const n = name.toLowerCase();
+    if (n.includes('burger') || n.includes('hamburg')) return '🍔';
+    if (n.includes('pizza')) return '🍕';
+    if (n.includes('açaí') || n.includes('acai')) return '🫐';
+    if (n.includes('sushi') || n.includes('sashimi') || n.includes('nigiri') || n.includes('roll')) return '🍣';
+    if (n.includes('temaki')) return '🍙';
+    if (n.includes('sorvete') || n.includes('milkshake') || n.includes('sundae')) return '🍦';
+    if (n.includes('café') || n.includes('cappuccino') || n.includes('espresso')) return '☕';
+    if (n.includes('pão') || n.includes('coxinha') || n.includes('esfiha') || n.includes('kibe')) return '🥐';
+    if (n.includes('batata') || n.includes('onion')) return '🍟';
+    if (n.includes('coca') || n.includes('guaraná') || n.includes('sprite') || n.includes('refri')) return '🥤';
+    if (n.includes('suco') || n.includes('água de coco')) return '🧃';
+    if (n.includes('cerveja') || n.includes('chopp') || n.includes('heineken') || n.includes('brahma')) return '🍺';
+    if (n.includes('caipirinha') || n.includes('gin') || n.includes('saquê') || n.includes('vodka')) return '🍸';
+    if (n.includes('água') || n.includes('água tônica')) return '💧';
+    if (n.includes('brigadeiro') || n.includes('doce')) return '🍫';
+    if (n.includes('salada')) return '🥗';
+    if (n.includes('frango') || n.includes('bife') || n.includes('peixe') || n.includes('carne')) return '🍖';
+    if (n.includes('smoothie')) return '🥤';
+    return '🍽️';
+  }
+
+  return (
+    <div className="bg-white text-black rounded-2xl overflow-hidden shadow-2xl max-w-md mx-auto border border-gray-200">
+      {/* Store Header */}
+      <div className="bg-[#ff9607] text-black p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center text-lg font-bold">
+              {storeName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2 className="font-bold text-sm leading-tight">{storeName}</h2>
+              <div className="flex items-center gap-1 text-[10px] text-black/70">
+                <Star className="h-3 w-3 fill-black" /> 4.8 · <Clock className="h-3 w-3" /> 30-45 min
+              </div>
+            </div>
+          </div>
+          <div className="relative">
+            <ShoppingCart className="h-5 w-5" />
+            {totalCart > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {totalCart}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-black/40" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Buscar no cardápio..."
+            className="w-full bg-black/10 rounded-lg pl-8 pr-3 py-2 text-xs placeholder-black/40 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      {filteredDraft.length > 0 && !searchQuery && (
+        <div className="flex gap-2 overflow-x-auto p-3 pb-1 border-b border-gray-100 scrollbar-hide">
+          {filteredDraft.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCat(cat.id)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                activeCat === cat.id ? 'bg-[#ff9607] text-black' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Products */}
+      <div className="p-3 space-y-3 max-h-[60vh] overflow-y-auto">
+        {(searchQuery ? filteredDraft : filteredDraft.filter(c => c.id === activeCat)).map(cat => (
+          <div key={cat.id}>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{cat.name}</h4>
+            <div className="space-y-2">
+              {cat.products.map(product => (
+                <div key={product.id} className="flex gap-3 p-2 bg-gray-50 rounded-xl">
+                  <div className="w-14 h-14 bg-[#ff9607]/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                    {getEmoji(product.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{product.name}</p>
+                    <p className="text-[11px] text-gray-500 line-clamp-2">{product.description || 'Sem descrição'}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm font-bold text-[#ff9607]">R$ {product.price.toFixed(2)}</span>
+                      <button
+                        onClick={() => addToCart(product.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-[#ff9607] text-black rounded-lg text-[11px] font-bold hover:bg-[#ffaa33] transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                        {cart[product.id] || 0}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {filteredDraft.length === 0 && (
+          <div className="text-center py-8">
+            <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">Nenhum produto encontrado</p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom bar */}
+      {totalCart > 0 && (
+        <div className="p-3 border-t border-gray-100">
+          <button className="w-full bg-[#ff9607] text-black py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#ffaa33] transition-colors">
+            <ShoppingCart className="h-4 w-4" />
+            Ver carrinho · {totalCart} item{totalCart !== 1 ? 's' : ''}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ---------- Sortable Draft Product ---------- */
@@ -121,7 +266,7 @@ function SortableDraftCategory({
   const [expanded, setExpanded] = useState(true);
   const [activeProdId, setActiveProdId] = useState<string | null>(null);
 
-  const sensors = useSensors(
+  const prodSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
@@ -165,7 +310,7 @@ function SortableDraftCategory({
           {category.products.length === 0 && <p className="text-xs text-gray-600 text-center py-4">Nenhum produto</p>}
 
           <DndContext
-            sensors={sensors}
+            sensors={prodSensors}
             collisionDetection={closestCenter}
             onDragStart={e => setActiveProdId(e.active.id as string)}
             onDragEnd={e => { setActiveProdId(null); onProductDragEnd(category.id, e); }}
@@ -213,6 +358,8 @@ export default function CardapioIaPage() {
   const [businessType, setBusinessType] = useState('HAMBURGUERIA');
   const [done, setDone] = useState(false);
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'editor' | 'preview'>('editor');
+  const [storeName, setStoreName] = useState('Minha Loja');
 
   const catSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -227,6 +374,7 @@ export default function CardapioIaPage() {
           const store = d.data[0];
           const bt = store.businessType || 'HAMBURGUERIA';
           setBusinessType(bt);
+          setStoreName(store.name || 'Minha Loja');
           if (AI_TEMPLATES[bt]) {
             setSelectedTemplates([bt]);
             populateDraft([bt]);
@@ -379,7 +527,7 @@ export default function CardapioIaPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={goToCardapio} className="p-2 bg-zinc-900 border border-white/10 rounded-xl hover:border-white/20 transition-colors">
@@ -390,7 +538,7 @@ export default function CardapioIaPage() {
             <Sparkles className="h-5 w-5 text-[#ff9607]" />
             Cardápio com IA
           </h1>
-          <p className="text-gray-400 text-sm">Selecione modelos, edite, reordene e personalize antes de gerar</p>
+          <p className="text-gray-400 text-sm">Selecione modelos, edite e visualize como o cliente verá</p>
         </div>
       </div>
 
@@ -435,66 +583,151 @@ export default function CardapioIaPage() {
         </div>
       </div>
 
-      {/* Draft Editor */}
+      {/* Editor / Preview Tabs */}
       {draft.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UtensilsCrossed className="h-4 w-4 text-[#ff9607]" />
-              <h3 className="font-bold text-sm">2. Revise e personalize</h3>
-            </div>
-            <span className="text-xs text-gray-500">{totalCategories} categorias · {totalProducts} produtos</span>
+        <div className="flex items-center justify-between">
+          <div className="flex bg-zinc-900 border border-white/5 rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('editor')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
+                viewMode === 'editor' ? 'bg-[#ff9607] text-black' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Pencil className="h-3.5 w-3.5" /> Editor
+            </button>
+            <button
+              onClick={() => setViewMode('preview')}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-1.5 ${
+                viewMode === 'preview' ? 'bg-[#ff9607] text-black' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Eye className="h-3.5 w-3.5" /> Preview do Cliente
+            </button>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1"><GripVertical className="h-3 w-3" /> Arraste para reordenar</span>
-            <span className="flex items-center gap-1"><Pencil className="h-3 w-3" /> Clique no lápis para editar</span>
-          </div>
-
-          <DndContext
-            sensors={catSensors}
-            collisionDetection={closestCenter}
-            onDragStart={e => setActiveCatId(e.active.id as string)}
-            onDragEnd={handleCatDragEnd}
-          >
-            <SortableContext items={draft.map(c => `dc-${c.id}`)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {draft.map((category, index) => (
-                  <SortableDraftCategory
-                    key={category.id}
-                    category={category}
-                    index={index}
-                    onProductEdit={editProduct}
-                    onProductDelete={deleteProduct}
-                    onCategoryEdit={editCategory}
-                    onCategoryDelete={deleteCategory}
-                    onAddProduct={addProduct}
-                    onProductDragEnd={handleProdDragEnd}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-            <DragOverlay>
-              {activeCatId ? (
-                <div className="bg-zinc-800 border-2 border-[#ff9607]/40 rounded-2xl p-5 shadow-2xl opacity-95">
-                  <p className="text-sm font-bold text-[#ff9607]">{draft.find(c => `dc-${c.id}` === activeCatId)?.name}</p>
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-
-          <button
-            onClick={addCategory}
-            className="w-full flex items-center justify-center gap-1.5 py-3 text-sm text-gray-500 hover:text-[#ff9607] hover:bg-[#ff9607]/5 rounded-xl border border-dashed border-white/5 hover:border-[#ff9607]/30 transition-colors"
-          >
-            <Plus className="h-4 w-4" /> Adicionar categoria
-          </button>
-        </motion.div>
+          <span className="text-xs text-gray-500">{totalCategories} categorias · {totalProducts} produtos</span>
+        </div>
       )}
+
+      {/* Editor View */}
+      <AnimatePresence mode="wait">
+        {viewMode === 'editor' && draft.length > 0 && (
+          <motion.div
+            key="editor"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-3"
+          >
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1"><GripVertical className="h-3 w-3" /> Arraste para reordenar</span>
+              <span className="flex items-center gap-1"><Pencil className="h-3 w-3" /> Clique no lápis para editar</span>
+            </div>
+
+            <DndContext
+              sensors={catSensors}
+              collisionDetection={closestCenter}
+              onDragStart={e => setActiveCatId(e.active.id as string)}
+              onDragEnd={handleCatDragEnd}
+            >
+              <SortableContext items={draft.map(c => `dc-${c.id}`)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {draft.map((category, index) => (
+                    <SortableDraftCategory
+                      key={category.id}
+                      category={category}
+                      index={index}
+                      onProductEdit={editProduct}
+                      onProductDelete={deleteProduct}
+                      onCategoryEdit={editCategory}
+                      onCategoryDelete={deleteCategory}
+                      onAddProduct={addProduct}
+                      onProductDragEnd={handleProdDragEnd}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeCatId ? (
+                  <div className="bg-zinc-800 border-2 border-[#ff9607]/40 rounded-2xl p-5 shadow-2xl opacity-95">
+                    <p className="text-sm font-bold text-[#ff9607]">{draft.find(c => `dc-${c.id}` === activeCatId)?.name}</p>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+
+            <button
+              onClick={addCategory}
+              className="w-full flex items-center justify-center gap-1.5 py-3 text-sm text-gray-500 hover:text-[#ff9607] hover:bg-[#ff9607]/5 rounded-xl border border-dashed border-white/5 hover:border-[#ff9607]/30 transition-colors"
+            >
+              <Plus className="h-4 w-4" /> Adicionar categoria
+            </button>
+          </motion.div>
+        )}
+
+        {/* Preview View */}
+        {viewMode === 'preview' && draft.length > 0 && (
+          <motion.div
+            key="preview"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          >
+            {/* Phone Preview */}
+            <div className="flex flex-col items-center">
+              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                <Eye className="h-3 w-3" /> Visualização do celular do cliente
+              </p>
+              <ClientPreview draft={draft} storeName={storeName} />
+            </div>
+
+            {/* Tips */}
+            <div className="space-y-4">
+              <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+                <h4 className="font-bold text-sm mb-3">Dicas de organização</h4>
+                <ul className="space-y-2 text-sm text-gray-400">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#ff9607] mt-0.5">•</span>
+                    <span>Mantenha os produtos mais populares no topo de cada categoria</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#ff9607] mt-0.5">•</span>
+                    <span>Use descrições curtas e apetitosas (máx. 2 linhas)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#ff9607] mt-0.5">•</span>
+                    <span>Preços com .90 ou .99 convertem melhor</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#ff9607] mt-0.5">•</span>
+                    <span>Crie uma categoria "Mais Pedidos" com os campeões de venda</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+                <h4 className="font-bold text-sm mb-3">Resumo do cardápio</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Categorias</span>
+                    <span className="font-medium">{totalCategories}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Produtos</span>
+                    <span className="font-medium">{totalProducts}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Preço médio</span>
+                    <span className="font-medium">
+                      R$ {(draft.flatMap(c => c.products).reduce((s, p) => s + p.price, 0) / Math.max(1, totalProducts)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {draft.length === 0 && selectedTemplates.length === 0 && (
         <div className="text-center py-12 bg-zinc-900 border border-white/5 rounded-2xl">

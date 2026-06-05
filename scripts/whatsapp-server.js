@@ -37,8 +37,10 @@ async function start() {
     auth: state,
     printQRInTerminal: false,
     browser: Browsers.macOS('Desktop'),
-    // Aumenta o tempo de pairing
-    qrMaxRetries: 10,
+    // Tenta indefinidamente — sempre gera novo QR quando expira
+    qrMaxRetries: Infinity,
+    connectTimeoutMs: 60000,
+    keepAliveIntervalMs: 30000,
   });
 
   sock.ev.on('connection.update', async (update) => {
@@ -61,9 +63,8 @@ async function start() {
       isConnected = false;
       currentPhone = null;
       saveStatus();
-      if (shouldReconnect) {
-        setTimeout(start, 3000);
-      }
+      // Sempre reconecta para gerar novo QR code
+      setTimeout(start, 2000);
     } else if (connection === 'open') {
       const userJid = sock.user?.id;
       currentPhone = userJid ? userJid.split(':')[0].split('@')[0] : null;

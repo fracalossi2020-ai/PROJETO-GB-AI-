@@ -8,18 +8,22 @@ const AUTH_DIR = path.join(__dirname, '..', 'prisma', 'baileys-auth');
 
 if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
 
-let currentQr = null;
+// lastQr NUNCA é limpo — sempre mantém o último QR válido
+let lastQr = null;
 let isConnected = false;
 let currentPhone = null;
+let qrGenerationCount = 0;
 
 function saveStatus() {
   try {
     fs.writeFileSync(STATUS_FILE, JSON.stringify({
-      qr: currentQr,
+      qr: lastQr,
       connected: isConnected,
       phone: currentPhone,
-      state: isConnected ? 'connected' : (currentQr ? 'qr' : 'connecting'),
-      message: isConnected ? `Conectado: ${currentPhone || ''}` : (currentQr ? 'Escaneie o QR Code com o WhatsApp' : 'Gerando QR Code...'),
+      state: isConnected ? 'connected' : (lastQr ? 'qr' : 'connecting'),
+      message: isConnected
+        ? `Conectado: ${currentPhone || ''}`
+        : (lastQr ? `QR Code #${qrGenerationCount} gerado. Escaneie com o WhatsApp.` : 'Gerando QR Code...'),
       updatedAt: new Date().toISOString(),
     }, null, 2));
   } catch (e) {
@@ -40,6 +44,7 @@ async function start() {
     qrMaxRetries: Infinity,
     connectTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
+    defaultQueryTimeoutMs: 60000,
   });
 
   sock.ev.on('connection.update', async (update) => {
@@ -47,8 +52,9 @@ async function start() {
 
     if (qr) {
       try {
-        currentQr = await QRCode.toDataURL(qr, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
-        console.log('[WhatsApp] QR Code gerado! Escaneie para conectar.');
+        qrGenerationCount++;
+        lastQr = await QRCode.toDataURL(qr, { width: 400, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+        console.log(`[WhatsApp] QR Code #${qrGenerationCount} gerado! Escaneie para conectar.`);
         saveStatus();
       } catch (e) {
         console.error('[WhatsApp] Erro ao gerar QR:', e.message);
@@ -56,20 +62,24 @@ async function start() {
     }
 
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-      console.log('[WhatsApp] Conexão fechada. Reconectar:', shouldReconnect);
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+      console.log(`[WhatsApp] Conexão fechada (code: ${statusCode}). Logout: ${isLoggedOut}`);
+
       isConnected = false;
       currentPhone = null;
-      // IMPORTANTE: NÃO limpa currentQr — mantém o último QR visível até o novo ser gerado
+
+      // IMPORTANTE: NÃO limpa lastQr — mantém sempre visível
       saveStatus();
-      if (shouldReconnect) {
+
+      if (!isLoggedOut) {
+        console.log('[WhatsApp] Reconectando em 2s para gerar novo QR...');
         setTimeout(start, 2000);
       }
     } else if (connection === 'open') {
       const userJid = sock.user?.id;
       currentPhone = userJid ? userJid.split(':')[0].split('@')[0] : null;
       isConnected = true;
-      currentQr = null;
       console.log(`[WhatsApp] Conectado! Número: ${currentPhone || 'Desconhecido'}`);
       saveStatus();
     }
@@ -77,6 +87,7 @@ async function start() {
 
   sock.ev.on('creds.update', saveCreds);
 
+  // Robô responde mensagens
   sock.ev.on('messages.upsert', async (m) => {
     if (m.type !== 'notify') return;
     for (const msg of m.messages) {
@@ -110,6 +121,6 @@ start();
 
 process.on('SIGINT', () => {
   console.log('\n[WhatsApp] Desligando...');
-  fs.writeFileSync(STATUS_FILE, JSON.stringify({ qr: null, connected: false, phone: null, state: 'stopped', message: 'Servidor parado' }, null, 2));
+  fs.writeFileSync(STATUS_FILE, JSON.stringify({ qr: lastQr, connected: false, phone: null, state: 'stopped', message: 'Servidor parado' }, null, 2));
   process.exit(0);
 });

@@ -366,24 +366,6 @@ export default function CardapioIaPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  useEffect(() => {
-    fetch('/api/stores')
-      .then(r => r.json())
-      .then(d => {
-        if (d.data?.[0]) {
-          const store = d.data[0];
-          const bt = store.businessType || 'HAMBURGUERIA';
-          setBusinessType(bt);
-          setStoreName(store.name || 'Minha Loja');
-          if (AI_TEMPLATES[bt]) {
-            setSelectedTemplates([bt]);
-            populateDraft([bt]);
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   function populateDraft(keys: string[]) {
     setDraft(prev => {
       const merged = [...prev];
@@ -407,6 +389,24 @@ export default function CardapioIaPage() {
       return merged;
     });
   }
+
+  useEffect(() => {
+    fetch('/api/stores')
+      .then(r => r.json())
+      .then(d => {
+        if (d.data?.[0]) {
+          const store = d.data[0];
+          const bt = store.businessType || 'HAMBURGUERIA';
+          setBusinessType(bt);
+          setStoreName(store.name || 'Minha Loja');
+          if (AI_TEMPLATES[bt]) {
+            setSelectedTemplates([bt]);
+            populateDraft([bt]);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function toggleTemplate(key: string) {
     setSelectedTemplates(prev => {

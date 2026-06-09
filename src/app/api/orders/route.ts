@@ -1,6 +1,66 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+function formatCurrency(value: number) {
+  return `R$ ${value.toFixed(2).replace('.', ',')}`;
+}
+
+function formatOrderNumber(n: number) {
+  return String(n).padStart(3, '0');
+}
+
+async function sendWhatsAppConfirmation(phone: string, order: any, storeName?: string) {
+  try {
+    const itemsText = order.items.map((item: any) => {
+      let line = `• ${item.product.name}`;
+      if (item.quantity > 1) line += ` (${item.quantity}x)`;
+      if (item.addons?.length) {
+        line += `\n   + ${item.addons.map((a: any) => a.name).join(', ')}`;
+      }
+      if (item.note) line += `\n   📝 ${item.note}`;
+      line += `\n   ${formatCurrency(item.totalPrice)}`;
+      return line;
+    }).join('\n\n');
+
+    const store = storeName || 'nossa loja';
+    const orderNum = order.orderNumber || order.id.slice(-6).toUpperCase();
+
+    const message = `🛒 *Pedido #${orderNum} confirmado!*\n\n` +
+      `Oi ${order.customer.name}! 👋\n` +
+      `Recebemos seu pedido na *${store}*:\n\n` +
+      `${itemsText}\n\n` +
+      `💰 *Total: ${formatCurrency(order.total)}*\n` +
+      `📊 Status: *Em preparação* ⏳\n\n` +
+      `Estamos preparando com muito carinho! 🍳\n\n` +
+      `Precisa de mais alguma coisa? É só mandar aqui! 😊`;
+
+    const res = await fetch('http://localhost:3001/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, message }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('[Orders] Falha ao enviar WhatsApp:', err.error || res.statusText);
+    } else {
+      console.log('[Orders] WhatsApp de confirmação enviado para', phone);
+    }
+  } catch (e) {
+    console.error('[Orders] Erro ao enviar WhatsApp:', e);
+  }
+}
+
+async function generateOrderNumber(storeId: string): Promise<string> {
+  const lastOrder = await prisma.order.findFirst({
+    where: { storeId, orderNumber: { not: null } },
+    orderBy: { orderNumber: 'desc' },
+  });
+
+  const lastNum = lastOrder?.orderNumber ? parseInt(lastOrder.orderNumber, 10) : 0;
+  return formatOrderNumber(lastNum + 1);
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
   const { storeId, customer, items, type, paymentMethod, changeFor, customerNote, tableNumber } = body;
@@ -55,10 +115,14 @@ export async function POST(req: Request) {
   const serviceFee = type === 'DINE_IN' ? (store?.serviceFee || 0) / 100 * subtotal : 0;
   const total = subtotal + deliveryFee + serviceFee;
 
+  // Gera número sequencial do pedido
+  const orderNumber = await generateOrderNumber(storeId);
+
   const order = await prisma.order.create({
     data: {
       storeId,
       customerId: cust.id,
+      orderNumber,
       type,
       paymentMethod,
       changeFor,
@@ -84,6 +148,9 @@ export async function POST(req: Request) {
       customer: true,
     },
   });
+
+  // Envia confirmação via WhatsApp para o cliente que fez o pedido
+  await sendWhatsAppConfirmation(customer.phone, order, store?.name);
 
   return NextResponse.json({ success: true, data: order }, { status: 201 });
 }

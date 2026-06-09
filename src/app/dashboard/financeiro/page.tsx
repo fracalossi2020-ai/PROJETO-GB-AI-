@@ -112,7 +112,7 @@ export default function FinanceiroPage() {
           <h1 className="text-xl font-bold">Financeiro</h1>
           <p className="text-gray-400 text-sm">Acompanhe receitas, despesas e métricas financeiras</p>
         </div>
-        <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
+        <div className="flex bg-white/[0.03] rounded-lg p-1 border border-white/5">
           {(['7d', '30d', '90d'] as const).map(p => (
             <button
               key={p}
@@ -161,7 +161,7 @@ export default function FinanceiroPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="lg:col-span-2 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Faturamento Diário</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={stats.dailyData}>
@@ -170,14 +170,14 @@ export default function FinanceiroPage() {
               <YAxis stroke="#666" fontSize={11} tickFormatter={v => `R$${v}`} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
-                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Faturamento']}
+                formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
               />
               <Bar dataKey="valor" fill="#ff9607" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Por Forma de Pagamento</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -196,7 +196,7 @@ export default function FinanceiroPage() {
               </Pie>
               <Tooltip
                 contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
-                formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -215,7 +215,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Detailed Table */}
-      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
         <h3 className="font-bold text-sm mb-4">Resumo por Forma de Pagamento</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.paymentData.map((item, i) => (
@@ -240,7 +240,7 @@ export default function FinanceiroPage() {
 
 function FinCard({ title, value, subtitle, icon: Icon, color, trend, negative }: any) {
   return (
-    <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors">
+    <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5 hover:border-white/10 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className={`w-9 h-9 ${color} rounded-lg flex items-center justify-center`}>
           <Icon className="h-4 w-4 text-white" />

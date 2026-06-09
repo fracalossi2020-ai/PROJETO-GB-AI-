@@ -66,11 +66,11 @@ export default function ClientesPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por nome ou telefone..."
-          className="w-full bg-zinc-900 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+          className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl backdrop-blur-sm pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
         />
       </div>
 
-      <div className="bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden">
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm overflow-hidden">
         <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-white/5 text-xs text-gray-500 font-medium">
           <div className="col-span-4">Cliente</div>
           <div className="col-span-3">Contato</div>

@@ -94,7 +94,7 @@ export default function PedidoDetalhePage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="text-lg font-bold">Pedido #{order.id.slice(-6).toUpperCase()}</h1>
+            <h1 className="text-lg font-bold">Pedido #${order.orderNumber || order.id.slice(-6).toUpperCase()}</h1>
             <p className="text-gray-500 text-xs">
               {new Date(order.createdAt).toLocaleString('pt-BR')}
             </p>

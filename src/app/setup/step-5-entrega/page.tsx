@@ -36,8 +36,10 @@ export default function Step5Entrega() {
           .filter(Boolean)
           .join(', ');
         if (endereco) {
-          setAddressSearch(endereco);
-          buscarEndereco(endereco);
+          setTimeout(() => {
+            setAddressSearch(endereco);
+            buscarEndereco(endereco);
+          }, 0);
         }
       } catch {
         // ignore

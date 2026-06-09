@@ -107,7 +107,7 @@ export default function RelatoriosPage() {
           <p className="text-gray-400 text-sm">Análise completa do desempenho do seu negócio</p>
         </div>
         <div className="flex gap-2">
-          <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
+          <div className="flex bg-white/[0.03] rounded-lg p-1 border border-white/5">
             {(['7d', '30d', '90d'] as const).map(p => (
               <button
                 key={p}
@@ -120,7 +120,7 @@ export default function RelatoriosPage() {
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-lg text-xs text-gray-400 hover:text-white transition-colors">
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border border-white/5 rounded-lg text-xs text-gray-400 hover:text-white transition-colors">
             <Download className="h-3.5 w-3.5" /> Exportar
           </button>
         </div>
@@ -138,7 +138,7 @@ export default function RelatoriosPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Orders & Revenue */}
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Pedidos e Faturamento por Dia</h3>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={stats.dailyData}>
@@ -154,7 +154,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Hourly Distribution */}
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Pedidos por Hora do Dia</h3>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={stats.hourlyData}>
@@ -168,7 +168,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Order Type */}
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Pedidos por Tipo</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
@@ -200,7 +200,7 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Summary Table */}
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Resumo do Período</h3>
           <div className="space-y-3">
             <SummaryRow label="Total de pedidos" value={stats.totalOrders.toString()} />
@@ -219,7 +219,7 @@ export default function RelatoriosPage() {
 
 function RelCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) {
   return (
-    <div className="bg-zinc-900 border border-white/5 rounded-xl p-4">
+    <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl backdrop-blur-sm p-4">
       <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center mb-2`}>
         <Icon className="h-4 w-4 text-white" />
       </div>

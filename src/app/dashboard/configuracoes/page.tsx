@@ -1,17 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Store, Clock, CreditCard, Truck, Palette, Bell, Shield } from 'lucide-react';
+import { Save, Store, Clock, CreditCard, Truck, Palette } from 'lucide-react';
+
+interface StoreData {
+  id: string;
+  name: string;
+  phone: string;
+  whatsapp: string;
+  address: string;
+  city: string;
+  state: string;
+  themeColor: string;
+  isOpen: boolean;
+  autoAcceptOrders: boolean;
+  autoPrint: boolean;
+}
 
 export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState<'loja' | 'horario' | 'pagamento' | 'entrega' | 'aparencia'>('loja');
+  const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
-  const [storeData, setStoreData] = useState({
+  const [storeData, setStoreData] = useState<StoreData>({
+    id: '',
     name: '',
     phone: '',
     whatsapp: '',
     address: '',
+    city: '',
+    state: '',
     themeColor: '#ff9607',
     isOpen: true,
     autoAcceptOrders: false,
@@ -19,18 +38,62 @@ export default function ConfiguracoesPage() {
   });
 
   useEffect(() => {
-    const saved = localStorage.getItem('setup_dados');
-    if (saved) {
-      try {
-        const d = JSON.parse(saved);
-        setStoreData(prev => ({ ...prev, ...d }));
-      } catch { /* ignore */ }
-    }
+    fetch('/api/stores')
+      .then(r => r.json())
+      .then(d => {
+        if (d.data?.[0]) {
+          const s = d.data[0];
+          setStoreData({
+            id: s.id,
+            name: s.name || '',
+            phone: s.phone || '',
+            whatsapp: s.whatsapp || '',
+            address: s.address || '',
+            city: s.city || '',
+            state: s.state || '',
+            themeColor: s.themeColor || '#ff9607',
+            isOpen: s.isOpen ?? true,
+            autoAcceptOrders: s.autoAcceptOrders ?? false,
+            autoPrint: s.autoPrint ?? false,
+          });
+        }
+      })
+      .catch(() => setError('Erro ao carregar dados da loja'));
   }, []);
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  async function handleSave() {
+    if (!storeData.id) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/stores/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: storeData.name,
+          phone: storeData.phone,
+          whatsapp: storeData.whatsapp,
+          address: storeData.address,
+          city: storeData.city,
+          state: storeData.state,
+          themeColor: storeData.themeColor,
+          isOpen: storeData.isOpen,
+          autoAcceptOrders: storeData.autoAcceptOrders,
+          autoPrint: storeData.autoPrint,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        setError(json.message || 'Erro ao salvar');
+      }
+    } catch {
+      setError('Erro ao salvar configurações');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const tabs = [
@@ -58,7 +121,7 @@ export default function ConfiguracoesPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                 activeTab === tab.id
                   ? 'bg-[#ff9607] text-black'
-                  : 'bg-zinc-900 text-gray-400 border border-white/5 hover:text-white'
+                  : 'bg-white/[0.03] text-gray-400 border border-white/5 hover:text-white'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -68,7 +131,7 @@ export default function ConfiguracoesPage() {
         })}
       </div>
 
-      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5 space-y-4">
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5 space-y-4">
         {activeTab === 'loja' && (
           <>
             <h3 className="font-bold text-sm mb-1">Dados da Loja</h3>
@@ -78,7 +141,7 @@ export default function ConfiguracoesPage() {
                 <input
                   value={storeData.name}
                   onChange={e => setStoreData({ ...storeData, name: e.target.value })}
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
                 />
               </div>
               <div>
@@ -86,7 +149,7 @@ export default function ConfiguracoesPage() {
                 <input
                   value={storeData.phone}
                   onChange={e => setStoreData({ ...storeData, phone: e.target.value })}
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
                 />
               </div>
               <div>
@@ -94,7 +157,24 @@ export default function ConfiguracoesPage() {
                 <input
                   value={storeData.whatsapp}
                   onChange={e => setStoreData({ ...storeData, whatsapp: e.target.value })}
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Cidade</label>
+                <input
+                  value={storeData.city}
+                  onChange={e => setStoreData({ ...storeData, city: e.target.value })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Estado</label>
+                <input
+                  value={storeData.state}
+                  maxLength={2}
+                  onChange={e => setStoreData({ ...storeData, state: e.target.value.toUpperCase() })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -102,11 +182,11 @@ export default function ConfiguracoesPage() {
                 <input
                   value={storeData.address}
                   onChange={e => setStoreData({ ...storeData, address: e.target.value })}
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-6 pt-2">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -116,85 +196,47 @@ export default function ConfiguracoesPage() {
                 />
                 <span className="text-sm text-gray-300">Loja aberta</span>
               </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={storeData.autoAcceptOrders}
+                  onChange={e => setStoreData({ ...storeData, autoAcceptOrders: e.target.checked })}
+                  className="w-4 h-4 accent-[#ff9607]"
+                />
+                <span className="text-sm text-gray-300">Aceitar pedidos automaticamente</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={storeData.autoPrint}
+                  onChange={e => setStoreData({ ...storeData, autoPrint: e.target.checked })}
+                  className="w-4 h-4 accent-[#ff9607]"
+                />
+                <span className="text-sm text-gray-300">Imprimir pedidos automaticamente</span>
+              </label>
             </div>
           </>
         )}
 
         {activeTab === 'horario' && (
-          <>
-            <h3 className="font-bold text-sm mb-1">Horário de Funcionamento</h3>
-            {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, i) => (
-              <div key={day} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
-                <span className="text-sm w-20">{day}</span>
-                <input type="time" defaultValue="08:00" className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white" />
-                <span className="text-gray-500">até</span>
-                <input type="time" defaultValue="22:00" className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white" />
-                <label className="flex items-center gap-2 ml-auto">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#ff9607]" />
-                  <span className="text-xs text-gray-400">Aberto</span>
-                </label>
-              </div>
-            ))}
-          </>
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-sm">Edição de horários será implementada em breve.</p>
+            <p className="text-xs mt-1">Os horários definidos no setup já estão ativos.</p>
+          </div>
         )}
 
         {activeTab === 'pagamento' && (
-          <>
-            <h3 className="font-bold text-sm mb-1">Formas de Pagamento</h3>
-            <div className="space-y-3">
-              {[
-                { key: 'pix', label: 'PIX', desc: 'Pagamento instantâneo' },
-                { key: 'cash', label: 'Dinheiro', desc: 'Pagamento na entrega' },
-                { key: 'credit', label: 'Cartão de Crédito', desc: 'Na maquininha' },
-                { key: 'debit', label: 'Cartão de Débito', desc: 'Na maquininha' },
-              ].map(p => (
-                <label key={p.key} className="flex items-center gap-3 p-3 bg-black/30 rounded-xl cursor-pointer hover:bg-black/40 transition-colors">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#ff9607]" />
-                  <div>
-                    <p className="text-sm font-medium">{p.label}</p>
-                    <p className="text-xs text-gray-500">{p.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-            <div className="pt-2">
-              <label className="block text-xs text-gray-400 mb-1">Chave PIX</label>
-              <input
-                placeholder="CPF, CNPJ, email ou chave aleatória"
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#ff9607]"
-              />
-            </div>
-          </>
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-sm">Edição de formas de pagamento será implementada em breve.</p>
+            <p className="text-xs mt-1">As formas de pagamento definidas no setup já estão ativas.</p>
+          </div>
         )}
 
         {activeTab === 'entrega' && (
-          <>
-            <h3 className="font-bold text-sm mb-1">Configurações de Entrega</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Taxa de entrega padrão (R$)</label>
-                <input type="number" defaultValue={5} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Pedido mínimo (R$)</label>
-                <input type="number" defaultValue={15} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Tempo mínimo (min)</label>
-                <input type="number" defaultValue={25} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Tempo máximo (min)</label>
-                <input type="number" defaultValue={45} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]" />
-              </div>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 accent-[#ff9607]" />
-                <span className="text-sm text-gray-300">Aceitar retirada na loja</span>
-              </label>
-            </div>
-          </>
+          <div className="text-center py-8 text-gray-500">
+            <p className="text-sm">Edição de zonas de entrega será implementada em breve.</p>
+            <p className="text-xs mt-1">As zonas definidas no setup já estão ativas.</p>
+          </div>
         )}
 
         {activeTab === 'aparencia' && (
@@ -213,16 +255,8 @@ export default function ConfiguracoesPage() {
                   <input
                     value={storeData.themeColor}
                     onChange={e => setStoreData({ ...storeData, themeColor: e.target.value })}
-                    className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-[#ff9607]"
+                    className="flex-1 bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-[#ff9607]"
                   />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Logo da loja</label>
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[#ff9607]/30 transition-colors cursor-pointer">
-                  <Store className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Clique para fazer upload do logo</p>
-                  <p className="text-xs text-gray-600 mt-1">PNG, JPG até 2MB</p>
                 </div>
               </div>
             </div>
@@ -230,12 +264,19 @@ export default function ConfiguracoesPage() {
         )}
       </div>
 
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
       <button
         onClick={handleSave}
-        className="w-full bg-[#ff9607] text-black py-3 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2"
+        disabled={loading || !storeData.id}
+        className="w-full bg-[#ff9607] text-black py-3 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
         <Save className="h-4 w-4" />
-        {saved ? 'Salvo com sucesso!' : 'Salvar Configurações'}
+        {loading ? 'Salvando...' : saved ? 'Salvo com sucesso!' : 'Salvar Configurações'}
       </button>
     </div>
   );

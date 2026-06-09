@@ -129,12 +129,12 @@ export default function PedidosPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por cliente, ID ou produto..."
-            className="w-full bg-zinc-900 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
+            className="w-full bg-white/[0.03] border border-white/5 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607]"
           />
         </div>
         <button
           onClick={() => { setSortBy(sortBy === 'date' ? 'total' : 'date'); setSortDesc(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-sm text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.03] border border-white/5 rounded-xl text-sm text-gray-400 hover:text-white transition-colors"
         >
           <ArrowUpDown className="h-4 w-4" />
           {sortBy === 'date' ? 'Data' : 'Valor'}
@@ -150,7 +150,7 @@ export default function PedidosPage() {
             className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
               statusFilter === opt.value
                 ? 'bg-[#ff9607] text-black'
-                : 'bg-zinc-900 text-gray-400 hover:text-white border border-white/5'
+                : 'bg-white/[0.03] text-gray-400 hover:text-white border border-white/5'
             }`}
           >
             {opt.label}
@@ -162,7 +162,7 @@ export default function PedidosPage() {
       {/* Orders List */}
       <div className="space-y-2">
         {filtered.length === 0 && (
-          <div className="text-center py-16 bg-zinc-900 border border-white/5 rounded-2xl">
+          <div className="text-center py-16 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm">
             <Filter className="h-8 w-8 text-gray-600 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">Nenhum pedido encontrado</p>
           </div>
@@ -176,7 +176,7 @@ export default function PedidosPage() {
           return (
             <div
               key={order.id}
-              className="bg-zinc-900 border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors"
+              className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 hover:border-white/[0.15] transition-all backdrop-blur-sm"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">

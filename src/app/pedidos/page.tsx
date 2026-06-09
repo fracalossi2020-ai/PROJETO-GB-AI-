@@ -25,12 +25,6 @@ export default function PedidosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  useEffect(() => {
-    loadOrders();
-    const interval = setInterval(loadOrders, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
   async function loadOrders() {
     try {
       const res = await fetch('/api/stores');
@@ -40,6 +34,12 @@ export default function PedidosPage() {
       }
     } catch (e) {}
   }
+
+  useEffect(() => {
+    loadOrders();
+    const interval = setInterval(loadOrders, 10000);
+    return () => clearInterval(interval);
+  }, [])
 
   async function updateStatus(orderId: string, status: string) {
     await fetch(`/api/orders/${orderId}`, {

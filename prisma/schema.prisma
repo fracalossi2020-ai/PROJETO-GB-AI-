@@ -207,6 +207,7 @@ model Customer {
 
 model Order {
   id            String @id @default(cuid())
+  orderNumber   String? // Número sequencial por loja: 001, 002, 003...
   status        String @default("NOVO") // NOVO, EM_PREPARO, SAIU_PARA_ENTREGA, PRONTO_RETIRADA, ENTREGUE, CANCELADO
   type          String @default("DELIVERY") // DELIVERY, PICKUP, DINE_IN
   paymentMethod String @default("PIX") // PIX, DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, VALE_REFEICAO

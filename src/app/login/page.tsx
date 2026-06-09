@@ -1,18 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/stores/auth';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { GridPattern, GlowOrb } from '@/components/GridPattern';
+
+async function redirectAfterAuth(router: ReturnType<typeof useRouter>) {
+  try {
+    const res = await fetch('/api/stores', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const data = await res.json();
+    if (data.data?.length > 0) {
+      router.push('/dashboard');
+    } else {
+      router.push('/setup/step-1-dados');
+    }
+  } catch {
+    router.push('/setup/step-1-dados');
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
   const { login } = useAuth();
   const router = useRouter();
+
+  // Se já tem token, redireciona automaticamente
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      redirectAfterAuth(router);
+    } else {
+      setChecking(false);
+    }
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +53,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (data.success) {
         login(data.data.user, data.data.token);
-        router.push('/setup/step-1-dados');
+        await redirectAfterAuth(router);
       } else {
         alert(data.message);
       }
@@ -37,69 +64,95 @@ export default function LoginPage() {
     }
   }
 
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center relative overflow-hidden">
+        <GridPattern className="opacity-40" />
+        <div className="relative z-10 text-center">
+          <Loader2 className="h-8 w-8 text-[#ff9607] animate-spin mx-auto mb-4" />
+          <p className="text-white/40 text-sm">Verificando sessão...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors">
+    <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center p-4 relative overflow-hidden">
+      <GridPattern className="opacity-40" />
+      <GlowOrb color="orange" className="w-[600px] h-[600px] -top-60 -right-60 opacity-20" />
+      <GlowOrb color="cyan" className="w-[500px] h-[500px] -bottom-40 -left-40 opacity-15" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white mb-8 transition-colors text-sm">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Link>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-black mb-2">
-            <span className="text-[#ff9607]">GB</span>.AI
-          </h1>
-          <p className="text-gray-400">Acesse sua conta</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">E-mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607] transition-colors"
-              required
-            />
+        <div className="backdrop-blur-2xl bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ff9607] to-[#ff0080] flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="h-6 w-6 text-black" />
+            </div>
+            <h1 className="text-2xl font-black">
+              <span className="bg-gradient-to-r from-[#ff9607] to-[#ff0080] bg-clip-text text-transparent">GB</span>.AI
+            </h1>
+            <p className="text-white/40 text-sm mt-2">Acesse sua conta</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Senha</label>
-            <div className="relative">
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5">E-mail</label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff9607] transition-colors"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#ff9607]/50 focus:shadow-[0_0_15px_rgba(255,150,7,0.15)] transition-all"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
             </div>
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5">Senha</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-[#ff9607]/50 focus:shadow-[0_0_15px_rgba(255,150,7,0.15)] transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-[#ff9607] to-[#ffaa33] text-black py-3.5 rounded-xl font-bold text-base hover:shadow-[0_0_25px_rgba(255,150,7,0.4)] transition-all disabled:opacity-50 mt-2"
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
 
-        <p className="text-center text-gray-400 mt-6">
-          Não tem conta?{' '}
-          <Link href="/cadastro" className="text-[#ff9607] hover:underline font-medium">
-            Criar conta
-          </Link>
-        </p>
-      </div>
+          <p className="text-center text-white/30 mt-6 text-sm">
+            Não tem conta?{' '}
+            <Link href="/cadastro" className="text-[#ff9607] hover:text-[#ffaa33] font-medium transition-colors">
+              Criar conta
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

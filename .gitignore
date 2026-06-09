@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -41,3 +42,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 prisma/prisma/dev.db
+
+# uploads
+/public/uploads/products/*
+/public/uploads/categories/*
+!/public/uploads/products/.gitkeep
+!/public/uploads/categories/.gitkeep
+
+# whatsapp runtime data
+.wwebjs_cache/
+prisma/baileys-auth/
+prisma/whatsapp-status.json
+prisma/whatsapp-config.json
+test-qr-check.png

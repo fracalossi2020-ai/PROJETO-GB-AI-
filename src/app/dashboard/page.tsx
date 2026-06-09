@@ -156,13 +156,13 @@ export default function DashboardPage() {
           <h1 className="text-xl font-bold">Visão Geral</h1>
           <p className="text-gray-400 text-sm">Acompanhe o desempenho do seu negócio</p>
         </div>
-        <div className="flex bg-zinc-900 rounded-lg p-1 border border-white/5">
+        <div className="flex bg-white/[0.03] rounded-xl p-1 border border-white/[0.08] backdrop-blur-sm">
           {(['hoje', 'semana', 'mes'] as const).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${
-                period === p ? 'bg-[#ff9607] text-black' : 'text-gray-400 hover:text-white'
+                period === p ? 'bg-gradient-to-r from-[#ff9607] to-[#ffaa33] text-black font-bold shadow-[0_0_10px_rgba(255,150,7,0.3)]' : 'text-white/40 hover:text-white'
               }`}
             >
               {p === 'hoje' ? 'Hoje' : p === 'semana' ? '7 dias' : '30 dias'}
@@ -225,7 +225,7 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="lg:col-span-2 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 backdrop-blur-sm">
           <h3 className="font-bold text-sm mb-4">Faturamento por hora</h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={stats.chartData}>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
               <YAxis stroke="#666" fontSize={12} tickFormatter={(v) => `R$${v}`} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }}
-                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Faturamento']}
+                formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
               />
               <Area type="monotone" dataKey="valor" stroke="#ff9607" fillOpacity={1} fill="url(#colorValor)" />
             </AreaChart>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 backdrop-blur-sm">
           <h3 className="font-bold text-sm mb-4">Formas de Pagamento</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -286,7 +286,7 @@ export default function DashboardPage() {
 
       {/* Recent Orders + Rating */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-zinc-900 border border-white/5 rounded-2xl p-5">
+        <div className="lg:col-span-2 bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-sm">Pedidos Recentes</h3>
             <Link href="/dashboard/pedidos" className="text-[#ff9607] text-xs hover:underline">
@@ -331,7 +331,7 @@ export default function DashboardPage() {
 
         <div className="space-y-4">
           {/* Rating Card */}
-          <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 backdrop-blur-sm">
             <h3 className="font-bold text-sm mb-3">Avaliação do Cardápio</h3>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-14 h-14 bg-[#ff9607]/10 rounded-xl flex items-center justify-center">
@@ -363,7 +363,7 @@ export default function DashboardPage() {
 
           {/* Pending Alert */}
           {stats.pendingOrders > 0 && (
-            <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-2xl p-4">
+            <div className="bg-[#ff9607]/5 border border-[#ff9607]/20 rounded-2xl p-4 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <AlertCircle className="h-5 w-5 text-[#ff9607]" />
                 <div>
@@ -388,7 +388,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, color, trend }: {
   trend?: number;
 }) {
   return (
-    <div className="bg-zinc-900 border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-colors">
+    <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 hover:border-white/[0.15] transition-all hover:-translate-y-0.5 backdrop-blur-sm">
       <div className="flex items-start justify-between mb-3">
         <div className={`w-9 h-9 ${color} rounded-lg flex items-center justify-center`}>
           <Icon className="h-4 w-4 text-white" />

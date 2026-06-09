@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Armchair, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Armchair, ArrowRight, ArrowLeft, Check, Loader2 } from 'lucide-react';
 
 export default function Step6Salao() {
   const router = useRouter();
@@ -11,10 +11,69 @@ export default function Step6Salao() {
   const [commands, setCommands] = useState(10);
   const [hasWaiters, setHasWaiters] = useState(false);
   const [serviceFee, setServiceFee] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleFinish() {
-    localStorage.setItem('setup_salao', JSON.stringify({ hasDineIn, tables, commands, hasWaiters, serviceFee }));
-    router.push('/dashboard');
+  async function handleFinish() {
+    setLoading(true);
+    setError('');
+
+    try {
+      // Lê todos os dados do setup
+      const dados = JSON.parse(localStorage.getItem('setup_dados') || '{}');
+      const pagamento = JSON.parse(localStorage.getItem('setup_pagamento') || '{}');
+      const horario = JSON.parse(localStorage.getItem('setup_horario') || '[]');
+      const entrega = JSON.parse(localStorage.getItem('setup_entrega') || '{}');
+      const cardapioTemplates = JSON.parse(localStorage.getItem('setup_cardapio_templates') || '[]');
+      const cardapioOption = localStorage.getItem('setup_cardapio_option') || '';
+      const salao = { hasDineIn, tables, commands, hasWaiters, serviceFee };
+
+      // Pega userId do auth store no localStorage
+      const authRaw = localStorage.getItem('gbai-auth');
+      const auth = authRaw ? JSON.parse(authRaw) : null;
+      const userId = auth?.state?.user?.id;
+
+      if (!userId) {
+        setError('Você precisa estar logado para finalizar o cadastro.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/stores/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          dados,
+          pagamento,
+          horario,
+          entrega,
+          salao,
+          cardapioTemplates,
+          cardapioOption,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Limpa dados do setup
+        localStorage.removeItem('setup_dados');
+        localStorage.removeItem('setup_pagamento');
+        localStorage.removeItem('setup_horario');
+        localStorage.removeItem('setup_entrega');
+        localStorage.removeItem('setup_salao');
+        localStorage.removeItem('setup_cardapio_templates');
+        localStorage.removeItem('setup_cardapio_option');
+        router.push('/dashboard');
+      } else {
+        setError(data.message || 'Erro ao criar loja');
+      }
+    } catch {
+      setError('Erro ao finalizar cadastro. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -106,18 +165,27 @@ export default function Step6Salao() {
         </div>
       )}
 
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           onClick={() => router.push('/setup/step-5-entrega')}
-          className="flex-1 border border-white/10 py-4 rounded-xl font-bold hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+          disabled={loading}
+          className="flex-1 border border-white/10 py-4 rounded-xl font-bold hover:bg-white/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <ArrowLeft className="h-5 w-5" /> Voltar
         </button>
         <button
           onClick={handleFinish}
-          className="flex-[2] bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2"
+          disabled={loading}
+          className="flex-[2] bg-[#ff9607] text-black py-4 rounded-xl font-bold text-lg hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Check className="h-5 w-5" /> Finalizar configuração
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+          {loading ? 'Finalizando...' : 'Finalizar configuração'}
         </button>
       </div>
     </div>

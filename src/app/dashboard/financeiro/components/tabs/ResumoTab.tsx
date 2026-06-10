@@ -117,47 +117,65 @@ export default function ResumoTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Por Forma de Pagamento</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={paymentData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
-                {paymentData.map((_, i) => (
-                  <Cell key={i} fill={PAYMENT_COLORS[i % PAYMENT_COLORS.length]} />
+          {paymentData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={paymentData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value">
+                    {paymentData.map((_, i) => (
+                      <Cell key={i} fill={PAYMENT_COLORS[i % PAYMENT_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }} formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="space-y-1.5 mt-2">
+                {paymentData.map((item, i) => (
+                  <div key={item.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
+                      <span className="text-gray-400">{item.name}</span>
+                    </div>
+                    <span className="font-medium">R$ {item.value.toFixed(2)}</span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '8px' }} formatter={(value: any) => `R$ ${Number(value).toFixed(2)}`} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-1.5 mt-2">
-            {paymentData.map((item, i) => (
-              <div key={item.name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
-                  <span className="text-gray-400">{item.name}</span>
-                </div>
-                <span className="font-medium">R$ {item.value.toFixed(2)}</span>
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[220px] text-gray-500">
+              <div className="w-24 h-24 rounded-full border-8 border-white/10 mb-3" />
+              <p className="text-sm">Sem dados de pagamento</p>
+              <p className="text-xs text-gray-600">Nenhum pedido entregue no período</p>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-2 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <h3 className="font-bold text-sm mb-4">Resumo por Forma de Pagamento</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {paymentData.map((item, i) => (
-              <div key={item.name} className="bg-white/5 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${PAYMENT_COLORS[i % PAYMENT_COLORS.length]}20` }}>
-                    <DollarSign className="h-4 w-4" style={{ color: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
+          {paymentData.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {paymentData.map((item, i) => (
+                <div key={item.name} className="bg-white/5 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${PAYMENT_COLORS[i % PAYMENT_COLORS.length]}20` }}>
+                      <DollarSign className="h-4 w-4" style={{ color: PAYMENT_COLORS[i % PAYMENT_COLORS.length] }} />
+                    </div>
+                    <span className="text-sm font-medium">{item.name}</span>
                   </div>
-                  <span className="text-sm font-medium">{item.name}</span>
+                  <p className="text-lg font-bold">R$ {item.value.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500">
+                    {kpis.revenue > 0 ? ((item.value / kpis.revenue) * 100).toFixed(1) : 0}% do total
+                  </p>
                 </div>
-                <p className="text-lg font-bold">R$ {item.value.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">
-                  {kpis.revenue > 0 ? ((item.value / kpis.revenue) * 100).toFixed(1) : 0}% do total
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[180px] text-gray-500">
+              <DollarSign className="h-10 w-10 mb-2 opacity-20" />
+              <p className="text-sm">Nenhuma forma de pagamento registrada</p>
+              <p className="text-xs text-gray-600">Adicione pedidos para ver o resumo</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

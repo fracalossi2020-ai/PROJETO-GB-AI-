@@ -56,7 +56,7 @@ export default function RobotPage() {
   const [testNumbers, setTestNumbers] = useState<string[]>([]);
   const [newTestNumber, setNewTestNumber] = useState('');
   const [welcomeMessage, setWelcomeMessage] = useState(
-    '👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?'
+    "👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?"
   );
   const [keywords, setKeywords] = useState<KeywordResponse[]>(DEFAULT_KEYWORDS);
   const [orderStatusTemplate, setOrderStatusTemplate] = useState(

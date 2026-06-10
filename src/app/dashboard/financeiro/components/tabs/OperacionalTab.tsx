@@ -2,7 +2,7 @@
 
 import { Clock, ShoppingBag, TrendingUp, TrendingDown, Star, Calendar } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { useFinanceiroData } from '../useFinanceiroData';
+import { useFinanceiroCtx } from '../FinanceiroProvider';
 import ExportarPdf from '../ExportarPdf';
 
 const TYPE_COLORS = ['#ff9607', '#22c55e', '#3b82f6'];
@@ -20,7 +20,7 @@ function RelCard({ icon: Icon, label, value, color }: { icon: any; label: string
 }
 
 export default function OperacionalTab() {
-  const { kpis, temporalData, typeData, tempoMedio, allFiltered, delivered } = useFinanceiroData();
+  const { kpis, temporalData, typeData, tempoMedio, allFiltered, delivered } = useFinanceiroCtx();
   const { weekday, hourly } = temporalData;
 
   const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];

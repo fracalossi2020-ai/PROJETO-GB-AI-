@@ -1,14 +1,14 @@
 'use client';
 
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { useFinanceiroData } from '../useFinanceiroData';
+import { useFinanceiroCtx } from '../FinanceiroProvider';
 import { ShoppingBag, TrendingUp, Package } from 'lucide-react';
 import ExportarPdf from '../ExportarPdf';
 
 const COLORS = ['#ff9607', '#22c55e', '#3b82f6', '#a855f7', '#ef4444', '#f59e0b', '#10b981', '#6366f1'];
 
 export default function ProdutosTab() {
-  const { produtosData, temporalData } = useFinanceiroData();
+  const { produtosData, temporalData } = useFinanceiroCtx();
   const { produtos, topLucrativos, categorias } = produtosData;
 
   const top10Vendidos = produtos.slice(0, 10);

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Package, Users, Settings, DollarSign
 } from 'lucide-react';
-import { useFinanceiroData, Period } from './components/useFinanceiroData';
+import { FinanceiroProvider, useFinanceiroCtx } from './components/FinanceiroProvider';
+import type { Period } from './components/useFinanceiroData';
 import ResumoTab from './components/tabs/ResumoTab';
 import ProdutosTab from './components/tabs/ProdutosTab';
 import ClientesTab from './components/tabs/ClientesTab';
@@ -21,9 +22,9 @@ const tabs: { key: TabKey; label: string; icon: any }[] = [
   { key: 'operacional', label: 'Operacional', icon: Settings },
 ];
 
-export default function FinanceiroPage() {
+function FinanceiroContent() {
   const [activeTab, setActiveTab] = useState<TabKey>('resumo');
-  const { loading, period, setPeriod } = useFinanceiroData();
+  const { loading, period, setPeriod } = useFinanceiroCtx();
 
   if (loading) {
     return (
@@ -88,5 +89,13 @@ export default function FinanceiroPage() {
         {activeTab === 'operacional' && <OperacionalTab />}
       </div>
     </div>
+  );
+}
+
+export default function FinanceiroPage() {
+  return (
+    <FinanceiroProvider>
+      <FinanceiroContent />
+    </FinanceiroProvider>
   );
 }

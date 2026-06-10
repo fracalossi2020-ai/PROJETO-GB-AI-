@@ -3,6 +3,7 @@
 import { DollarSign, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { useFinanceiroData } from '../useFinanceiroData';
+import ExportarPdf from '../ExportarPdf';
 
 const PAYMENT_COLORS = ['#ff9607', '#22c55e', '#3b82f6', '#a855f7', '#ef4444'];
 
@@ -37,10 +38,20 @@ export default function ResumoTab() {
 
   return (
     <div className="space-y-5">
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Faturamento" value={`R$ ${kpis.revenue.toFixed(2)}`} icon={DollarSign} color="bg-green-500" trend={kpis.revenueGrowth} />
-        <KpiCard title="Pedidos" value={String(kpis.orderCount)} subtitle="No período" icon={Wallet} color="bg-[#ff9607]" trend={kpis.orderGrowth} />
+      {/* Header com exportar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Resumo Financeiro</h2>
+          <p className="text-gray-400 text-xs">Visão geral de receitas, metas e formas de pagamento</p>
+        </div>
+        <ExportarPdf targetId="resumo-tab-content" fileName="relatorio-resumo" label="Baixar PDF" />
+      </div>
+
+      <div id="resumo-tab-content" className="space-y-5">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard title="Faturamento" value={`R$ ${kpis.revenue.toFixed(2)}`} icon={DollarSign} color="bg-green-500" trend={kpis.revenueGrowth} />
+          <KpiCard title="Pedidos" value={String(kpis.orderCount)} subtitle="No período" icon={Wallet} color="bg-[#ff9607]" trend={kpis.orderGrowth} />
         <KpiCard title="Ticket Médio" value={`R$ ${kpis.avgTicket.toFixed(2)}`} icon={TrendingUp} color="bg-blue-500" />
         <KpiCard title="Cancelamentos" value={`R$ ${kpis.cancelledValue.toFixed(2)}`} subtitle={`${kpis.cancelledCount} pedidos`} icon={TrendingDown} color="bg-red-500" negative />
       </div>
@@ -177,6 +188,7 @@ export default function ResumoTab() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

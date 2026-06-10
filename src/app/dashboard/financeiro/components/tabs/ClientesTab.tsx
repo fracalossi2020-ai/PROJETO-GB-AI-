@@ -3,6 +3,7 @@
 import { Users, UserCheck, UserPlus, MapPin } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { useFinanceiroData } from '../useFinanceiroData';
+import ExportarPdf from '../ExportarPdf';
 
 export default function ClientesTab() {
   const { clientesData, zonasData } = useFinanceiroData();
@@ -13,37 +14,47 @@ export default function ClientesTab() {
 
   return (
     <div className="space-y-5">
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-blue-400" />
-            <span className="text-gray-400 text-xs">Clientes Únicos</span>
-          </div>
-          <p className="text-2xl font-bold">{totalUnique}</p>
+      {/* Header com exportar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Clientes</h2>
+          <p className="text-gray-400 text-xs">Fidelização, top clientes e análise por região</p>
         </div>
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <UserCheck className="h-4 w-4 text-green-400" />
-            <span className="text-gray-400 text-xs">Recorrentes</span>
-          </div>
-          <p className="text-2xl font-bold">{recurrent}</p>
-        </div>
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <UserPlus className="h-4 w-4 text-[#ff9607]" />
-            <span className="text-gray-400 text-xs">Novos</span>
-          </div>
-          <p className="text-2xl font-bold">{newClients}</p>
-        </div>
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Users className="h-4 w-4 text-purple-400" />
-            <span className="text-gray-400 text-xs">Taxa de Retenção</span>
-          </div>
-          <p className="text-2xl font-bold">{retentionRate.toFixed(1)}%</p>
-        </div>
+        <ExportarPdf targetId="clientes-tab-content" fileName="relatorio-clientes" label="Baixar PDF" />
       </div>
+
+      <div id="clientes-tab-content" className="space-y-5">
+        {/* KPIs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4 text-blue-400" />
+              <span className="text-gray-400 text-xs">Clientes Únicos</span>
+            </div>
+            <p className="text-2xl font-bold">{totalUnique}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <UserCheck className="h-4 w-4 text-green-400" />
+              <span className="text-gray-400 text-xs">Recorrentes</span>
+            </div>
+            <p className="text-2xl font-bold">{recurrent}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <UserPlus className="h-4 w-4 text-[#ff9607]" />
+              <span className="text-gray-400 text-xs">Novos</span>
+            </div>
+            <p className="text-2xl font-bold">{newClients}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="h-4 w-4 text-purple-400" />
+              <span className="text-gray-400 text-xs">Taxa de Retenção</span>
+            </div>
+            <p className="text-2xl font-bold">{retentionRate.toFixed(1)}%</p>
+          </div>
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Top Clientes */}
@@ -115,6 +126,7 @@ export default function ClientesTab() {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

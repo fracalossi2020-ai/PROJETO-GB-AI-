@@ -17,7 +17,6 @@ const menu = [
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
   { href: '/dashboard/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/dashboard/robot', label: 'Robô WhatsApp', icon: Bot },
-  { href: '/dashboard/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/dashboard/compartilhar', label: 'Link da Loja', icon: Share2 },
   { href: '/dashboard/configuracoes', label: 'Configurações', icon: Settings },
 ];

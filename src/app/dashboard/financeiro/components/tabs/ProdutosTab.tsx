@@ -3,6 +3,7 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import { useFinanceiroData } from '../useFinanceiroData';
 import { ShoppingBag, TrendingUp, Package } from 'lucide-react';
+import ExportarPdf from '../ExportarPdf';
 
 const COLORS = ['#ff9607', '#22c55e', '#3b82f6', '#a855f7', '#ef4444', '#f59e0b', '#10b981', '#6366f1'];
 
@@ -15,30 +16,40 @@ export default function ProdutosTab() {
 
   return (
     <div className="space-y-5">
-      {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Package className="h-4 w-4 text-[#ff9607]" />
-            <span className="text-gray-400 text-xs">Produtos Vendidos</span>
-          </div>
-          <p className="text-2xl font-bold">{produtos.length}</p>
+      {/* Header com exportar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Produtos</h2>
+          <p className="text-gray-400 text-xs">Ranking de vendas, lucratividade e análise por categoria</p>
         </div>
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <ShoppingBag className="h-4 w-4 text-green-400" />
-            <span className="text-gray-400 text-xs">Total de Itens</span>
-          </div>
-          <p className="text-2xl font-bold">{produtos.reduce((s, p) => s + p.qty, 0)}</p>
-        </div>
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4 text-blue-400" />
-            <span className="text-gray-400 text-xs">Lucro Total em Produtos</span>
-          </div>
-          <p className="text-2xl font-bold text-green-400">R$ {produtos.reduce((s, p) => s + p.profit, 0).toFixed(2)}</p>
-        </div>
+        <ExportarPdf targetId="produtos-tab-content" fileName="relatorio-produtos" label="Baixar PDF" />
       </div>
+
+      <div id="produtos-tab-content" className="space-y-5">
+        {/* Cards de resumo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Package className="h-4 w-4 text-[#ff9607]" />
+              <span className="text-gray-400 text-xs">Produtos Vendidos</span>
+            </div>
+            <p className="text-2xl font-bold">{produtos.length}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <ShoppingBag className="h-4 w-4 text-green-400" />
+              <span className="text-gray-400 text-xs">Total de Itens</span>
+            </div>
+            <p className="text-2xl font-bold">{produtos.reduce((s, p) => s + p.qty, 0)}</p>
+          </div>
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="h-4 w-4 text-blue-400" />
+              <span className="text-gray-400 text-xs">Lucro Total em Produtos</span>
+            </div>
+            <p className="text-2xl font-bold text-green-400">R$ {produtos.reduce((s, p) => s + p.profit, 0).toFixed(2)}</p>
+          </div>
+        </div>
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -150,6 +161,7 @@ export default function ProdutosTab() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

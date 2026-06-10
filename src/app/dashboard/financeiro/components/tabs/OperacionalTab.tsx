@@ -3,6 +3,7 @@
 import { Clock, ShoppingBag, TrendingUp, TrendingDown, Star, Calendar } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useFinanceiroData } from '../useFinanceiroData';
+import ExportarPdf from '../ExportarPdf';
 
 const TYPE_COLORS = ['#ff9607', '#22c55e', '#3b82f6'];
 
@@ -30,12 +31,22 @@ export default function OperacionalTab() {
 
   return (
     <div className="space-y-5">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <RelCard icon={ShoppingBag} label="Total Pedidos" value={String(allFiltered.length)} color="bg-blue-500" />
-        <RelCard icon={TrendingUp} label="Entregues" value={String(delivered.length)} color="bg-green-500" />
-        <RelCard icon={TrendingDown} label="Cancelados" value={String(kpis.cancelledCount)} color="bg-red-500" />
-        <RelCard icon={Clock} label="Tempo Médio" value={`${tempoMedio.toFixed(0)} min`} color="bg-purple-500" />
+      {/* Header com exportar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Operacional</h2>
+          <p className="text-gray-400 text-xs">Pedidos por hora, dia da semana, tipo e tempo médio</p>
+        </div>
+        <ExportarPdf targetId="operacional-tab-content" fileName="relatorio-operacional" label="Baixar PDF" />
+      </div>
+
+      <div id="operacional-tab-content" className="space-y-5">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <RelCard icon={ShoppingBag} label="Total Pedidos" value={String(allFiltered.length)} color="bg-blue-500" />
+          <RelCard icon={TrendingUp} label="Entregues" value={String(delivered.length)} color="bg-green-500" />
+          <RelCard icon={TrendingDown} label="Cancelados" value={String(kpis.cancelledCount)} color="bg-red-500" />
+          <RelCard icon={Clock} label="Tempo Médio" value={`${tempoMedio.toFixed(0)} min`} color="bg-purple-500" />
         <RelCard icon={Star} label="Taxa Conversão" value={`${allFiltered.length > 0 ? ((delivered.length / allFiltered.length) * 100).toFixed(0) : 0}%`} color="bg-[#ff9607]" />
       </div>
 
@@ -103,6 +114,7 @@ export default function OperacionalTab() {
             <SummaryRow label="Média diária" value={`${(delivered.length / Math.max(1, temporalData.daily.filter(d => d.orders > 0).length || temporalData.daily.length)).toFixed(1)} pedidos`} />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

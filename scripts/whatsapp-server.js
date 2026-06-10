@@ -19,6 +19,11 @@ let qrAvailable = false;
 let clientInitialized = false;
 let robotEnabled = false;
 let activationPending = false;
+const repliedMessages = new Set();
+
+function getMsgId(msg) {
+  return msg.id?._serialized || msg.id?.id || `${msg.from}-${msg.timestamp}`;
+}
 
 function loadConfig() {
   try {
@@ -213,6 +218,14 @@ client.on('disconnected', (reason) => {
 client.on('message', async (msg) => {
   if (msg.fromMe) return;
 
+  const msgId = getMsgId(msg);
+
+  // Evita responder a mesma mensagem duas vezes
+  if (repliedMessages.has(msgId)) {
+    console.log(`[WhatsApp] Mensagem ${msgId} já respondida. Ignorando duplicata.`);
+    return;
+  }
+
   // Segurança: nunca responde se o robô está desativado
   if (!robotEnabled) {
     return;
@@ -226,11 +239,42 @@ client.on('message', async (msg) => {
   }
 
   const config = loadConfig();
-  const reply = config.welcomeMessage || '👋 Olá! Bem-vindo! Sou o assistente virtual.';
+  const textTrimmed = text.trim();
+  const textLower = text.toLowerCase();
+  let reply = null;
+
+  // 1. Verifica se digitou um número de menu (1, 2, 3...)
+  const menuNumber = parseInt(textTrimmed, 10);
+  if (!isNaN(menuNumber) && menuNumber > 0 && config.keywords && config.keywords.length >= menuNumber) {
+    reply = config.keywords[menuNumber - 1].response;
+    console.log(`[WhatsApp] Opção de menu ${menuNumber} selecionada.`);
+  }
+
+  // 2. Verifica palavras-chave configuradas (para quem prefere digitar)
+  if (!reply && config.keywords && config.keywords.length > 0) {
+    for (const kw of config.keywords) {
+      const kwList = kw.keywords.split(',').map((k) => k.trim().toLowerCase());
+      if (kwList.some((k) => textLower.includes(k))) {
+        reply = kw.response;
+        break;
+      }
+    }
+  }
+
+  // 3. Se não achou nada, manda mensagem de boas-vindas com menu
+  if (!reply) {
+    let menuText = '';
+    if (config.keywords && config.keywords.length > 0) {
+      menuText = config.keywords.map((kw, idx) => `${idx + 1} - ${kw.keywords.split(',')[0].trim()}`).join('\n');
+    }
+    const welcome = config.welcomeMessage || '👋 Olá! Bem-vindo!\n\nSou o assistente virtual.';
+    reply = menuText ? `${welcome}\n\nEscolha uma opção:\n${menuText}\n\nDigite o número ou escreva o que deseja.` : welcome;
+  }
 
   try {
     await msg.reply(reply);
-    console.log(`[WhatsApp] ✅ Resposta de boas-vindas enviada para ${msg.from}`);
+    repliedMessages.add(msgId);
+    console.log(`[WhatsApp] ✅ Resposta enviada para ${msg.from}`);
   } catch (e) {
     console.error('[WhatsApp] Erro ao enviar:', e.message);
   }

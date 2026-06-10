@@ -56,7 +56,7 @@ export default function RobotPage() {
   const [testNumbers, setTestNumbers] = useState<string[]>([]);
   const [newTestNumber, setNewTestNumber] = useState('');
   const [welcomeMessage, setWelcomeMessage] = useState(
-    "👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Posso te ajudar com:\n📋 Cardápio\n📦 Status do pedido\n🛵 Informações de entrega\n\nO que você precisa?"
+    "👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Escolha uma opção:\n\n1 - Cardápio\n2 - Horário de funcionamento\n3 - Status do pedido\n4 - Entrega\n5 - Pagamento\n\nDigite o número ou escreva o que deseja."
   );
   const [keywords, setKeywords] = useState<KeywordResponse[]>(DEFAULT_KEYWORDS);
   const [orderStatusTemplate, setOrderStatusTemplate] = useState(
@@ -616,7 +616,7 @@ export default function RobotPage() {
           <MessageSquare className="h-4 w-4 text-[#ff9607]" />
           <h3 className="font-bold text-sm">Mensagem de Boas-vindas</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-3">Esta é a primeira mensagem que o cliente recebe ao iniciar uma conversa.</p>
+        <p className="text-xs text-gray-500 mb-3">Esta é a primeira mensagem que o cliente recebe. O menu com números é gerado automaticamente baseado nas palavras-chave abaixo.</p>
         <textarea
           value={welcomeMessage}
           onChange={e => setWelcomeMessage(e.target.value)}
@@ -658,7 +658,7 @@ export default function RobotPage() {
           <Bot className="h-4 w-4 text-[#ff9607]" />
           <h3 className="font-bold text-sm">Palavras-chave e Respostas Automáticas</h3>
         </div>
-        <p className="text-xs text-gray-500 mb-4">Configure palavras-chave que o robô vai reconhecer. Clique no lápis para editar.</p>
+        <p className="text-xs text-gray-500 mb-4">O robô cria um menu numerado automaticamente (1, 2, 3...) com base nesta lista. O cliente pode digitar o número ou escrever a palavra-chave.</p>
 
         <div className="space-y-3 mb-4">
           {keywords.map(kw => (

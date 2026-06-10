@@ -55,3 +55,4 @@ prisma/baileys-auth/
 prisma/whatsapp-status.json
 prisma/whatsapp-config.json
 test-qr-check.png
+public/whatsapp-qr.png

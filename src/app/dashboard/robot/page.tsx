@@ -639,6 +639,14 @@ export default function RobotPage() {
               onClick={() => setWelcomeMessage(prev => prev + ' ' + tag)}>{tag}</span>
           ))}
         </div>
+        <button
+          onClick={saveConfig}
+          disabled={saving}
+          className="w-full mt-3 bg-[#ff9607] text-black py-2.5 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? 'Salvando...' : 'Salvar Mensagem'}
+        </button>
       </div>
 
       {/* Order Status Template */}

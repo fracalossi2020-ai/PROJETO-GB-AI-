@@ -2,6 +2,7 @@
 
 import { TrendingUp, TrendingDown, DollarSign, Percent, Truck, Tag, Receipt } from 'lucide-react';
 import { useFinanceiroData } from '../useFinanceiroData';
+import ExportarPdf from '../ExportarPdf';
 
 export default function LucroTab() {
   const { kpis, lucroData } = useFinanceiroData();
@@ -9,7 +10,17 @@ export default function LucroTab() {
 
   return (
     <div className="space-y-5">
-      {/* KPIs de lucro */}
+      {/* Header com exportar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Lucro & CMV</h2>
+          <p className="text-gray-400 text-xs">Análise de rentabilidade e custos do negócio</p>
+        </div>
+        <ExportarPdf targetId="lucro-tab-content" fileName="relatorio-lucro-cmv" label="Baixar PDF" />
+      </div>
+
+      <div id="lucro-tab-content" className="space-y-5">
+        {/* KPIs de lucro */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm p-5">
           <div className="flex items-center gap-2 mb-1">
@@ -109,6 +120,7 @@ export default function LucroTab() {
         <p className="text-sm text-gray-300">
           O CMV ideal para restaurantes fica entre <strong>28% e 35%</strong> da receita. Se o seu está acima de 35%, considere revisar os preços do cardápio ou negociar com fornecedores. Se estiver abaixo de 25%, verifique se a qualidade não está sendo prejudicada.
         </p>
+      </div>
       </div>
     </div>
   );

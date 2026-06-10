@@ -116,22 +116,19 @@ function shouldRespond(sender) {
   const senderClean = normalizePhone(sender);
 
   console.log(`[WhatsApp] Mensagem recebida de: ${sender} (normalizado: ${senderClean})`);
-  console.log(`[WhatsApp] Config - enabled: ${config.enabled}, testNumbers: ${JSON.stringify(config.testNumbers)}`);
 
   if (sender.endsWith('@g.us') || sender.endsWith('@newsletter')) {
     console.log('[WhatsApp] Ignorando grupo/newsletter');
     return false;
   }
 
-  if (config.enabled === true) {
-    if (!isConnected) {
-      console.log('[WhatsApp] Robô ativado mas NÃO CONECTADO - ignorando');
-      return false;
-    }
+  // Robô ativado responde qualquer pessoa (desde que conectado)
+  if (robotEnabled && isConnected) {
     console.log('[WhatsApp] Robô ATIVADO e CONECTADO - respondendo!');
     return true;
   }
 
+  // Whitelist funciona mesmo com robô desativado
   if (config.testNumbers && config.testNumbers.length > 0) {
     const match = config.testNumbers.some((num) => {
       const normalized = normalizePhone(num);
@@ -145,7 +142,7 @@ function shouldRespond(sender) {
     }
   }
 
-  console.log('[WhatsApp] Robô DESATIVADO e número NÃO está na whitelist - ignorando');
+  console.log('[WhatsApp] Robô DESATIVADO - ignorando mensagem.');
   return false;
 }
 

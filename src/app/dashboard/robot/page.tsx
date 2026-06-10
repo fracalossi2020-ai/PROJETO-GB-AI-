@@ -6,6 +6,7 @@ import {
   Smartphone, QrCode, CheckCircle2, Power, ShieldCheck, Pencil, RefreshCw,
   AlertTriangle, UserCheck
 } from 'lucide-react';
+import TechToast, { ToastData } from '@/components/TechToast';
 
 interface KeywordResponse {
   id: string;
@@ -34,7 +35,7 @@ interface RobotConfig {
 const DEFAULT_KEYWORDS: KeywordResponse[] = [
   { id: '1', keywords: 'cardápio, menu, o que tem', response: '📋 Acesse nosso cardápio:\nhttp://localhost:3000/hamburgueria-dois-irmaos\n\nQual item te interessa?' },
   { id: '2', keywords: 'horário, aberto, fecha', response: '⏰ Funcionamos todos os dias das 08:00 às 22:00.' },
-  { id: '3', keywords: 'pedido, status, onde está', response: '📦 Para verificar seu pedido, acesse:\nhttp://localhost:3000/pedido/[numero]' },
+  { id: '3', keywords: 'pedido, status, onde está', response: '📦 Para verificar seu pedido, acesse:\nhttp://localhost:3000/pedido/{id_do_pedido}\n\n_Substitua {id_do_pedido} pelo código do seu pedido._' },
   { id: '4', keywords: 'entrega, frete, taxa', response: '🛵 Taxa de entrega: R$ 5,00\nTempo estimado: 25-45 minutos' },
   { id: '5', keywords: 'pix, pagamento, como pagar', response: '💳 Aceitamos:\n✅ PIX\n✅ Dinheiro\n✅ Cartão de Crédito/Débito\n\nChave PIX: admin@gbai.com' },
 ];
@@ -51,6 +52,18 @@ export default function RobotPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
 
+  // Notificações toast tecnológicas
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+
+  function addToast(message: string, type: 'success' | 'error' = 'success') {
+    const id = Date.now().toString() + Math.random().toString(36).slice(2, 7);
+    setToasts((prev) => [...prev, { id, message, type }]);
+  }
+
+  function removeToast(id: string) {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
   // Configurações do robô
   const [robotEnabled, setRobotEnabled] = useState(false);
   const [testNumbers, setTestNumbers] = useState<string[]>([]);
@@ -58,10 +71,12 @@ export default function RobotPage() {
   const [welcomeMessage, setWelcomeMessage] = useState(
     "👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Escolha uma opção:\n\n1 - Cardápio\n2 - Horário de funcionamento\n3 - Status do pedido\n4 - Entrega\n5 - Pagamento\n\nDigite o número ou escreva o que deseja."
   );
+  const [originalWelcomeMessage, setOriginalWelcomeMessage] = useState('');
   const [keywords, setKeywords] = useState<KeywordResponse[]>(DEFAULT_KEYWORDS);
   const [orderStatusTemplate, setOrderStatusTemplate] = useState(
     '🛒 *Pedido #{numero_pedido} confirmado!*\n\nOi {cliente_nome}! 👋\nRecebemos seu pedido na *{nome_loja}*:\n\n📋 Itens:\n{itens_pedido}\n\n💰 *Total: R$ {total}*\n📊 Status: *Em preparação* ⏳\n\nEstamos preparando com muito carinho! 🍳\n\nPrecisa de mais alguma coisa? É só mandar aqui! 😊'
   );
+  const [originalOrderStatusTemplate, setOriginalOrderStatusTemplate] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editKw, setEditKw] = useState('');
@@ -79,8 +94,15 @@ export default function RobotPage() {
           const cfg = data.data;
           setRobotEnabled(cfg.enabled ?? false);
           setTestNumbers(cfg.testNumbers ?? []);
-          if (cfg.welcomeMessage) setWelcomeMessage(cfg.welcomeMessage);
+          if (cfg.welcomeMessage) {
+            setWelcomeMessage(cfg.welcomeMessage);
+            setOriginalWelcomeMessage(cfg.welcomeMessage);
+          }
           if (cfg.keywords && cfg.keywords.length > 0) setKeywords(cfg.keywords);
+          if (cfg.orderStatusTemplate) {
+            setOrderStatusTemplate(cfg.orderStatusTemplate);
+            setOriginalOrderStatusTemplate(cfg.orderStatusTemplate);
+          }
         }
       } catch {
         // ignora
@@ -134,7 +156,72 @@ export default function RobotPage() {
     return `👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Escolha uma opção:\n\n${menu}\n\nDigite o número ou escreva o que deseja.`;
   }
 
+  function cancelWelcomeMessage() {
+    setWelcomeMessage(originalWelcomeMessage || "👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Escolha uma opção:\n\n1 - Cardápio\n2 - Horário de funcionamento\n3 - Status do pedido\n4 - Entrega\n5 - Pagamento\n\nDigite o número ou escreva o que deseja.");
+  }
+
+  async function saveWelcomeMessageOnly() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const current = await fetch('/api/whatsapp/config').then(r => r.json());
+      const cfg = current.success ? current.data : {};
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...cfg,
+          welcomeMessage,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOriginalWelcomeMessage(welcomeMessage);
+        addToast('Preview salvo com sucesso!', 'success');
+      } else {
+        addToast('Erro ao salvar mensagem', 'error');
+      }
+    } catch {
+      addToast('Erro ao salvar mensagem', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelOrderTemplate() {
+    setOrderStatusTemplate(originalOrderStatusTemplate || '🛒 *Pedido #{numero_pedido} confirmado!*\n\nOi {cliente_nome}! 👋\nRecebemos seu pedido na *{nome_loja}*:\n\n📋 Itens:\n{itens_pedido}\n\n💰 *Total: R$ {total}*\n📊 Status: *Em preparação* ⏳\n\nEstamos preparando com muito carinho! 🍳\n\nPrecisa de mais alguma coisa? É só mandar aqui! 😊');
+  }
+
+  async function saveOrderTemplateOnly() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const current = await fetch('/api/whatsapp/config').then(r => r.json());
+      const cfg = current.success ? current.data : {};
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...cfg,
+          orderStatusTemplate,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOriginalOrderStatusTemplate(orderStatusTemplate);
+        addToast('Preview salvo com sucesso!', 'success');
+      } else {
+        addToast('Erro ao salvar template', 'error');
+      }
+    } catch {
+      addToast('Erro ao salvar template', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveConfig() {
+    if (saving) return;
     setSaving(true);
     const autoWelcome = generateWelcomeMessage();
     setWelcomeMessage(autoWelcome);
@@ -147,16 +234,17 @@ export default function RobotPage() {
           testNumbers,
           welcomeMessage: autoWelcome,
           keywords,
+          orderStatusTemplate,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        alert('✅ Configurações salvas com sucesso!');
+        addToast('Preview salvo com sucesso!', 'success');
       } else {
-        alert('❌ Erro ao salvar configurações');
+        addToast('Erro ao salvar configurações', 'error');
       }
     } catch {
-      alert('❌ Erro ao salvar configurações');
+      addToast('Erro ao salvar configurações', 'error');
     } finally {
       setSaving(false);
     }
@@ -639,14 +727,23 @@ export default function RobotPage() {
               onClick={() => setWelcomeMessage(prev => prev + ' ' + tag)}>{tag}</span>
           ))}
         </div>
-        <button
-          onClick={saveConfig}
-          disabled={saving}
-          className="w-full mt-3 bg-[#ff9607] text-black py-2.5 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? 'Salvando...' : 'Salvar Mensagem'}
-        </button>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={saveWelcomeMessageOnly}
+            disabled={saving}
+            className="flex-1 bg-[#ff9607] text-black py-2.5 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? 'Salvando...' : 'Salvar Mensagem'}
+          </button>
+          <button
+            onClick={cancelWelcomeMessage}
+            disabled={saving}
+            className="px-4 py-2.5 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-sm font-medium hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
       </div>
 
       {/* Order Status Template */}
@@ -668,14 +765,23 @@ export default function RobotPage() {
               onClick={() => setOrderStatusTemplate(prev => prev + ' ' + tag)}>{tag}</span>
           ))}
         </div>
-        <button
-          onClick={saveConfig}
-          disabled={saving}
-          className="w-full mt-3 bg-[#ff9607] text-black py-2.5 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? 'Salvando...' : 'Salvar Template'}
-        </button>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={saveOrderTemplateOnly}
+            disabled={saving}
+            className="flex-1 bg-[#ff9607] text-black py-2.5 rounded-xl font-bold text-sm hover:bg-[#ffaa33] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? 'Salvando...' : 'Salvar Template'}
+          </button>
+          <button
+            onClick={cancelOrderTemplate}
+            disabled={saving}
+            className="px-4 py-2.5 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-sm font-medium hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+        </div>
       </div>
 
       {/* Keywords */}
@@ -802,6 +908,9 @@ export default function RobotPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Tecnológico */}
+      <TechToast toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

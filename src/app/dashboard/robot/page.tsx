@@ -126,8 +126,18 @@ export default function RobotPage() {
     return () => clearInterval(interval);
   }, []);
 
+  function generateWelcomeMessage() {
+    if (keywords.length === 0) {
+      return "👋 Olá! Bem-vindo!\n\nSou o assistente virtual.\n\nO que você precisa?";
+    }
+    const menu = keywords.map((kw, idx) => `${idx + 1} - ${kw.keywords.split(',')[0].trim()}`).join('\n');
+    return `👋 Olá! Bem-vindo!\n\nSou o assistente virtual. Escolha uma opção:\n\n${menu}\n\nDigite o número ou escreva o que deseja.`;
+  }
+
   async function saveConfig() {
     setSaving(true);
+    const autoWelcome = generateWelcomeMessage();
+    setWelcomeMessage(autoWelcome);
     try {
       const res = await fetch('/api/whatsapp/config', {
         method: 'POST',
@@ -135,7 +145,7 @@ export default function RobotPage() {
         body: JSON.stringify({
           enabled: robotEnabled,
           testNumbers,
-          welcomeMessage,
+          welcomeMessage: autoWelcome,
           keywords,
         }),
       });

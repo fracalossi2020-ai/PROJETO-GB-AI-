@@ -2,7 +2,7 @@
 
 import { DollarSign, TrendingUp, TrendingDown, Wallet, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
-import { useFinanceiroData } from '../useFinanceiroData';
+import { useFinanceiroCtx } from '../FinanceiroProvider';
 import ExportarPdf from '../ExportarPdf';
 
 const PAYMENT_COLORS = ['#ff9607', '#22c55e', '#3b82f6', '#a855f7', '#ef4444'];
@@ -31,7 +31,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, color, trend, negative }:
 }
 
 export default function ResumoTab() {
-  const { kpis, temporalData, paymentData, previsao, meta, saveMeta, period } = useFinanceiroData();
+  const { kpis, temporalData, paymentData, previsao, meta, saveMeta, period } = useFinanceiroCtx();
 
   const metaInput = meta;
   const progress = metaInput > 0 ? Math.min(100, (previsao.monthRevenue / metaInput) * 100) : 0;

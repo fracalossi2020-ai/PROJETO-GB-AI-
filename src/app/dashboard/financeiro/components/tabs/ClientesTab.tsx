@@ -2,11 +2,11 @@
 
 import { Users, UserCheck, UserPlus, MapPin } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { useFinanceiroData } from '../useFinanceiroData';
+import { useFinanceiroCtx } from '../FinanceiroProvider';
 import ExportarPdf from '../ExportarPdf';
 
 export default function ClientesTab() {
-  const { clientesData, zonasData } = useFinanceiroData();
+  const { clientesData, zonasData } = useFinanceiroCtx();
   const { top, totalUnique, recurrent, newClients, retentionRate } = clientesData;
 
   // Dados para gráfico de bairros

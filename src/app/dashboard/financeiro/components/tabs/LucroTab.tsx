@@ -1,11 +1,11 @@
 'use client';
 
 import { TrendingUp, TrendingDown, DollarSign, Percent, Truck, Tag, Receipt } from 'lucide-react';
-import { useFinanceiroData } from '../useFinanceiroData';
+import { useFinanceiroCtx } from '../FinanceiroProvider';
 import ExportarPdf from '../ExportarPdf';
 
 export default function LucroTab() {
-  const { kpis, lucroData } = useFinanceiroData();
+  const { kpis, lucroData } = useFinanceiroCtx();
   const { custoTotal, receitaTotal, lucroBruto, margem, cmv, discountTotal, serviceFeeTotal, deliveryFeeTotal, ticketPorTipo } = lucroData;
 
   return (

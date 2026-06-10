@@ -47,6 +47,9 @@ export default function RobotPage() {
   const [pairingLoading, setPairingLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [enabling, setEnabling] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   // Configurações do robô
   const [robotEnabled, setRobotEnabled] = useState(false);
@@ -98,9 +101,19 @@ export default function RobotPage() {
           setWpStatus(data.data);
           if (data.data.qrUrl) {
             setQrUrl(data.data.qrUrl);
+          } else if (data.data.state !== 'qr') {
+            setQrUrl(null);
           }
           if (data.data.pairingCode) {
             setPairingCode(data.data.pairingCode);
+          } else if (data.data.state !== 'pairing') {
+            setPairingCode(null);
+          }
+          // Sincroniza estado ativo baseado na conexão real
+          if (data.data.connected) {
+            setRobotEnabled(true);
+          } else if (data.data.state === 'disabled') {
+            setRobotEnabled(false);
           }
         }
       } catch {
@@ -136,6 +149,74 @@ export default function RobotPage() {
       alert('❌ Erro ao salvar configurações');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openModal(message: string) {
+    setModalMessage(message);
+    setShowModal(true);
+  }
+
+  async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 4000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
+      return res;
+    } catch (err: any) {
+      clearTimeout(id);
+      if (err.name === 'AbortError') {
+        throw new Error('Timeout');
+      }
+      throw err;
+    }
+  }
+
+  async function toggleRobot() {
+    if (robotEnabled) {
+      setEnabling(true);
+      try {
+        const res = await fetchWithTimeout('/api/whatsapp/disable', { method: 'POST' }, 4000);
+        const data = await res.json();
+        if (data.success) {
+          setRobotEnabled(false);
+          setQrUrl(null);
+          setPairingCode(null);
+        } else {
+          openModal('Não é possível desativar o robô no momento. Tente novamente.');
+        }
+      } catch {
+        openModal('Não é possível desativar pois o servidor WhatsApp não está respondendo.');
+      } finally {
+        setEnabling(false);
+      }
+    } else {
+      setEnabling(true);
+      try {
+        const res = await fetchWithTimeout('/api/whatsapp/enable', { method: 'POST' }, 4000);
+        const data = await res.json();
+        if (data.success) {
+          setRobotEnabled(data.activationPending || data.robotEnabled);
+          // Se o QR já estiver disponível no servidor, mostra imediatamente
+          if (data.qrUrl) {
+            setQrUrl(data.qrUrl + '?t=' + Date.now());
+          }
+          if (data.pairingCode) {
+            setPairingCode(data.pairingCode);
+          }
+          if (!data.robotEnabled && !data.qrUrl && data.activationPending) {
+            setQrUrl(null);
+            setPairingCode(null);
+          }
+        } else {
+          openModal(data.error || 'Não é possível ativar pois precisa de um aparelho conectado');
+        }
+      } catch {
+        openModal('Não é possível ativar pois precisa de um aparelho conectado');
+      } finally {
+        setEnabling(false);
+      }
     }
   }
 
@@ -240,35 +321,54 @@ export default function RobotPage() {
           <h3 className="font-bold text-sm">Controle do Robô</h3>
         </div>
 
-        <div className={`p-4 rounded-xl border mb-4 ${
-          robotEnabled
-            ? 'bg-green-500/5 border-green-500/20'
-            : 'bg-red-500/5 border-red-500/20'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm font-bold ${robotEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                {robotEnabled ? '🟢 Robô ATIVO — respondendo todo mundo' : '🔴 Robô DESATIVADO — silencioso'}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {robotEnabled
-                  ? 'O robô vai responder qualquer mensagem que receber.'
-                  : 'O robô NÃO responde NINGUÉM, exceto números de teste (abaixo).'}
-              </p>
+        {(() => {
+          const isActive = wpStatus?.connected;
+          const isActivating = robotEnabled && !isActive;
+          return (
+            <div className={`p-4 rounded-xl border mb-4 ${
+              isActive
+                ? 'bg-green-500/5 border-green-500/20'
+                : isActivating
+                  ? 'bg-[#ff9607]/5 border-[#ff9607]/20'
+                  : 'bg-red-500/5 border-red-500/20'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-bold ${
+                    isActive ? 'text-green-400' : isActivating ? 'text-[#ff9607]' : 'text-red-400'
+                  }`}>
+                    {isActive
+                      ? '🟢 Robô ATIVO — respondendo todo mundo'
+                      : isActivating
+                        ? '🟠 Robô ATIVANDO — aguardando conexão'
+                        : '🔴 Robô DESATIVADO — silencioso'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {isActive
+                      ? 'O robô vai responder qualquer mensagem que receber.'
+                      : isActivating
+                        ? 'Leia o QR Code ou use o código de pareamento para conectar.'
+                        : 'O robô NÃO responde NINGUÉM, exceto números de teste (abaixo).'}
+                  </p>
+                </div>
+                <button
+                  onClick={toggleRobot}
+                  disabled={enabling}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${
+                    isActive
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
+                      : isActivating
+                        ? 'bg-[#ff9607]/20 text-[#ff9607] border border-[#ff9607]/30 hover:bg-[#ff9607]/30'
+                        : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                  }`}
+                >
+                  {enabling ? <RefreshCw className="h-5 w-5 animate-spin" /> : (robotEnabled ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />)}
+                  {enabling ? 'Processando...' : (robotEnabled ? 'Desativar' : 'Ativar')}
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => setRobotEnabled(prev => !prev)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                robotEnabled
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
-                  : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-              }`}
-            >
-              {robotEnabled ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-              {robotEnabled ? 'Desativar' : 'Ativar'}
-            </button>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Números de Teste */}
         <div className="space-y-3">
@@ -338,6 +438,125 @@ export default function RobotPage() {
                   </div>
                 </div>
               </div>
+            ) : robotEnabled ? (
+              /* Ativando / QR / Pairing - Área unificada de conexão */
+              <div className="space-y-4">
+                {/* QR Code */}
+                <div className="flex flex-col items-center gap-4 p-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl">
+                  {qrUrl ? (
+                    <>
+                      <div className="bg-white p-4 rounded-2xl shadow-lg">
+                        <img
+                          src={qrUrl}
+                          alt="QR Code WhatsApp"
+                          className="w-56 h-56"
+                          key={qrUrl}
+                        />
+                      </div>
+                      {wpStatus?.updatedAt && (
+                        <p className="text-[10px] text-white/30">
+                          QR atualizado: {new Date(wpStatus.updatedAt).toLocaleTimeString()}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <div className="w-16 h-16 bg-[#ff9607]/10 rounded-2xl flex items-center justify-center">
+                        <RefreshCw className="h-8 w-8 text-[#ff9607] animate-spin" />
+                      </div>
+                      <p className="text-sm font-medium text-[#ff9607]">Gerando QR Code...</p>
+                      <p className="text-xs text-gray-500">Aguarde alguns segundos</p>
+                    </div>
+                  )}
+
+                  <div className="text-center space-y-3 max-w-sm w-full">
+                    <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-xl p-3">
+                      <p className="text-sm font-bold text-[#ff9607]">📱 Como conectar</p>
+                      <ol className="text-xs text-white/60 mt-2 text-left space-y-1 list-decimal list-inside">
+                        <li>Abra o <strong>WhatsApp</strong> no seu celular</li>
+                        <li>Toque em <strong>Configurações</strong> (ou ⋮ no Android)</li>
+                        <li>Escolha <strong>Aparelhos vinculados / Dispositivos vinculados</strong></li>
+                        <li>Toque em <strong>Vincular um dispositivo</strong></li>
+                        <li><strong>Aponte a câmera</strong> para o QR Code acima</li>
+                      </ol>
+                    </div>
+
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
+                      <p className="text-xs text-blue-400">
+                        💡 O QR Code muda a cada ~20-40 segundos. A imagem atualiza automaticamente — escaneie rapidamente!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Código de pareamento — sempre visível abaixo */}
+                <div className="p-5 bg-white/[0.03] border border-white/[0.08] rounded-2xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Smartphone className="h-4 w-4 text-cyan-400" />
+                    <h4 className="font-bold text-sm">Código de pareamento (mais fácil)</h4>
+                  </div>
+                  <p className="text-xs text-white/40 mb-3">
+                    Em vez de escanear QR Code, digite um código de 8 dígitos no celular.
+                  </p>
+
+                  {pairingCode ? (
+                    <div className="text-center space-y-3">
+                      <div className="bg-[#050505] border border-cyan-500/30 rounded-xl p-4">
+                        <p className="text-xs text-white/40 mb-1">Seu código</p>
+                        <p className="text-4xl font-black tracking-[0.3em] text-cyan-400">{pairingCode}</p>
+                      </div>
+                      <div className="text-left bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3">
+                        <p className="text-xs text-cyan-400 font-bold mb-1">Como usar:</p>
+                        <ol className="text-xs text-white/60 space-y-1 list-decimal list-inside">
+                          <li>Abra o <strong>WhatsApp</strong> no celular</li>
+                          <li>Toque em <strong>Configurações → Aparelhos vinculados</strong></li>
+                          <li>Toque em <strong>Vincular com número de telefone</strong></li>
+                          <li>Digite o código acima: <strong>{pairingCode}</strong></li>
+                        </ol>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <input
+                        type="tel"
+                        value={pairingPhone}
+                        onChange={(e) => setPairingPhone(e.target.value)}
+                        placeholder="Seu número com DDD (ex: 11999998888)"
+                        className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 transition-all"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!pairingPhone.trim()) return;
+                          setPairingLoading(true);
+                          try {
+                            const res = await fetch('/api/whatsapp/pairing-code', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ phoneNumber: pairingPhone }),
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              setPairingCode(data.data.code);
+                              setQrUrl(null);
+                            } else {
+                              alert(data.message);
+                            }
+                          } catch {
+                            alert('Erro ao gerar código');
+                          } finally {
+                            setPairingLoading(false);
+                          }
+                        }}
+                        disabled={pairingLoading || !pairingPhone.trim()}
+                        className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-bold text-sm hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {pairingLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                        {pairingLoading ? 'Gerando código...' : 'Gerar código de pareamento'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
               <div className="flex items-center gap-3 p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
                 <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
@@ -345,159 +564,9 @@ export default function RobotPage() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">WhatsApp desconectado</p>
-                  <p className="text-xs text-gray-500">Escaneie o QR Code abaixo para conectar</p>
+                  <p className="text-xs text-gray-500">Clique em "Ativar" acima para iniciar a conexão.</p>
                 </div>
               </div>
-            )}
-
-            {qrUrl && wpStatus?.state !== 'offline' && !pairingCode && (
-              <div className="flex flex-col items-center gap-4 p-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl">
-                <div className="bg-white p-4 rounded-2xl shadow-lg">
-                  <img
-                    src={qrUrl}
-                    alt="QR Code WhatsApp"
-                    className="w-56 h-56"
-                    key={qrUrl}
-                  />
-                </div>
-                {wpStatus?.updatedAt && (
-                  <p className="text-[10px] text-white/30">
-                    QR atualizado: {new Date(wpStatus.updatedAt).toLocaleTimeString()}
-                  </p>
-                )}
-
-                <div className="text-center space-y-3 max-w-sm">
-                  <div className="bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-xl p-3">
-                    <p className="text-sm font-bold text-[#ff9607]">📱 Como conectar</p>
-                    <ol className="text-xs text-white/60 mt-2 text-left space-y-1 list-decimal list-inside">
-                      <li>Abra o <strong>WhatsApp</strong> no seu celular</li>
-                      <li>Toque em <strong>Configurações</strong> (ou ⋮ no Android)</li>
-                      <li>Escolha <strong>Aparelhos vinculados / Dispositivos vinculados</strong></li>
-                      <li>Toque em <strong>Vincular um dispositivo</strong></li>
-                      <li><strong>Aponte a câmera</strong> para o QR Code acima</li>
-                    </ol>
-                  </div>
-
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-                    <p className="text-xs text-blue-400">
-                      💡 O QR Code muda a cada ~20-40 segundos. A imagem atualiza automaticamente — escaneie rapidamente!
-                    </p>
-                  </div>
-
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                    <p className="text-xs text-red-400">
-                      ⚠️ Se aparecer "não foi possível conectar novos dispositivos", você atingiu o limite de <strong>4 dispositivos</strong>. Remova um antigo ou use o <strong>código de pareamento</strong> abaixo.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={generateQr}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white/[0.05] border border-white/[0.08] rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar QR
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        await fetch('/api/whatsapp/reset', { method: 'POST' });
-                        setQrUrl(null);
-                        setPairingCode(null);
-                        setTimeout(() => generateQr(), 3000);
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className="h-4 w-4" /> Gerar novo QR
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {wpStatus?.state !== 'offline' && (
-              <div className="p-5 bg-white/[0.03] border border-white/[0.08] rounded-2xl">
-                <div className="flex items-center gap-2 mb-3">
-                  <Smartphone className="h-4 w-4 text-cyan-400" />
-                  <h4 className="font-bold text-sm">Código de pareamento (mais fácil)</h4>
-                </div>
-                <p className="text-xs text-white/40 mb-3">
-                  Em vez de escanear QR Code, digite um código de 8 dígitos no celular.
-                </p>
-
-                {pairingCode ? (
-                  <div className="text-center space-y-3">
-                    <div className="bg-[#050505] border border-cyan-500/30 rounded-xl p-4">
-                      <p className="text-xs text-white/40 mb-1">Seu código</p>
-                      <p className="text-4xl font-black tracking-[0.3em] text-cyan-400">{pairingCode}</p>
-                    </div>
-                    <div className="text-left bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3">
-                      <p className="text-xs text-cyan-400 font-bold mb-1">Como usar:</p>
-                      <ol className="text-xs text-white/60 space-y-1 list-decimal list-inside">
-                        <li>Abra o <strong>WhatsApp</strong> no celular</li>
-                        <li>Toque em <strong>Configurações → Aparelhos vinculados</strong></li>
-                        <li>Toque em <strong>Vincular com número de telefone</strong></li>
-                        <li>Digite o código acima: <strong>{pairingCode}</strong></li>
-                      </ol>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <input
-                      type="tel"
-                      value={pairingPhone}
-                      onChange={(e) => setPairingPhone(e.target.value)}
-                      placeholder="Seu número com DDD (ex: 11999998888)"
-                      className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/50 transition-all"
-                    />
-                    <button
-                      onClick={async () => {
-                        if (!pairingPhone.trim()) return;
-                        setPairingLoading(true);
-                        try {
-                          const res = await fetch('/api/whatsapp/pairing-code', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phoneNumber: pairingPhone }),
-                          });
-                          const data = await res.json();
-                          if (data.success) {
-                            setPairingCode(data.data.code);
-                            setQrUrl(null);
-                          } else {
-                            alert(data.message);
-                          }
-                        } catch {
-                          alert('Erro ao gerar código');
-                        } finally {
-                          setPairingLoading(false);
-                        }
-                      }}
-                      disabled={pairingLoading || !pairingPhone.trim()}
-                      className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-bold text-sm hover:shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {pairingLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                      {pairingLoading ? 'Gerando código...' : 'Gerar código de pareamento'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!qrUrl && !pairingCode && wpStatus?.state !== 'offline' && (
-              <button
-                onClick={generateQr}
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-[#ff9607] to-[#ffaa33] text-black rounded-xl font-bold text-sm hover:shadow-[0_0_25px_rgba(255,150,7,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                {loading ? 'Gerando QR Code...' : 'Gerar QR Code'}
-              </button>
             )}
           </div>
         ) : (
@@ -511,6 +580,32 @@ export default function RobotPage() {
                 <p className="text-xs text-gray-500">{phoneDisplay} · Pronto para uso</p>
               </div>
             </div>
+            <button
+              onClick={async () => {
+                setEnabling(true);
+                try {
+                  const res = await fetchWithTimeout('/api/whatsapp/logout', { method: 'POST' }, 10000);
+                  const data = await res.json();
+                  if (data.success) {
+                    setRobotEnabled(false);
+                    setQrUrl(null);
+                    setPairingCode(null);
+                    setWpStatus(prev => prev ? { ...prev, connected: false, state: 'disabled', phone: null } : null);
+                  } else {
+                    openModal(data.error || 'Erro ao desconectar.');
+                  }
+                } catch {
+                  openModal('Não foi possível desconectar. Tente novamente.');
+                } finally {
+                  setEnabling(false);
+                }
+              }}
+              disabled={enabling}
+              className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {enabling ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
+              {enabling ? 'Desconectando...' : 'Desconectar WhatsApp'}
+            </button>
           </div>
         )}
       </div>
@@ -648,6 +743,39 @@ export default function RobotPage() {
         {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
         {saving ? 'Salvando...' : 'Salvar Configurações do Robô'}
       </button>
+
+      {/* Modal de Notificação Central */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-[#0a0a0a]/90 border border-white/[0.08] rounded-2xl backdrop-blur-xl p-6 shadow-2xl shadow-black/50 animate-[fadeIn_0.2s_ease-out]">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-[#ff9607]/10 border border-[#ff9607]/20 rounded-2xl flex items-center justify-center">
+                <Smartphone className="h-8 w-8 text-[#ff9607]" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-white">Conexão Necessária</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  {modalMessage}
+                </p>
+              </div>
+
+              <div className="w-full pt-2">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-full py-3 bg-gradient-to-r from-[#ff9607] to-[#ffaa33] text-black rounded-xl font-bold text-sm hover:shadow-[0_0_25px_rgba(255,150,7,0.4)] transition-all"
+                >
+                  Entendi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

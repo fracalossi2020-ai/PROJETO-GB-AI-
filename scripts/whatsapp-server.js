@@ -258,14 +258,9 @@ client.on('message', async (msg) => {
     }
   }
 
-  // 3. Se não achou nada, manda mensagem de boas-vindas com menu
+  // 3. Se não achou nada, manda mensagem de boas-vindas
   if (!reply) {
-    let menuText = '';
-    if (config.keywords && config.keywords.length > 0) {
-      menuText = config.keywords.map((kw, idx) => `${idx + 1} - ${kw.keywords.split(',')[0].trim()}`).join('\n');
-    }
-    const welcome = config.welcomeMessage || '👋 Olá! Bem-vindo!\n\nSou o assistente virtual.';
-    reply = menuText ? `${welcome}\n\nEscolha uma opção:\n${menuText}\n\nDigite o número ou escreva o que deseja.` : welcome;
+    reply = config.welcomeMessage || '👋 Olá! Bem-vindo!\n\nSou o assistente virtual.';
   }
 
   try {

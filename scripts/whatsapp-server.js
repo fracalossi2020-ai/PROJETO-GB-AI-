@@ -16,12 +16,15 @@ let isConnected = false;
 let currentPhone = null;
 let lastPairingCode = null;
 let qrAvailable = false;
+let clientInitialized = false;
+let robotEnabled = false;
+let activationPending = false;
 
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-      console.log('[WhatsApp] Config carregada de:', CONFIG_FILE, '-> testNumbers:', JSON.stringify(config.testNumbers));
+      console.log('[WhatsApp] Config carregada -> enabled:', config.enabled, 'testNumbers:', JSON.stringify(config.testNumbers));
       return config;
     }
   } catch (e) {
@@ -30,17 +33,48 @@ function loadConfig() {
   return { enabled: false, testNumbers: [], welcomeMessage: '', keywords: [] };
 }
 
+function saveConfig(config) {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify({ ...config, updatedAt: new Date().toISOString() }, null, 2));
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao salvar config:', e.message);
+  }
+}
+
 function saveStatus(override = {}) {
   try {
+    let state;
+    let message;
+
+    if (robotEnabled && isConnected) {
+      state = 'connected';
+      message = `Conectado: ${currentPhone || ''}`;
+    } else if (activationPending && lastPairingCode) {
+      state = 'pairing';
+      message = `Código de pareamento: ${lastPairingCode}. Confirme no WhatsApp para ativar o robô.`;
+    } else if (activationPending && qrAvailable) {
+      state = 'qr';
+      message = 'QR Code ativo. Escaneie com o WhatsApp para ativar o robô.';
+    } else if (activationPending && clientInitialized) {
+      state = 'awaiting_connection';
+      message = 'Aguardando conexão. Leia o QR Code ou use o código de pareamento para ativar o robô.';
+    } else if (activationPending) {
+      state = 'awaiting_connection';
+      message = 'Ativação pendente. Inicie a conexão com o WhatsApp.';
+    } else {
+      state = 'disabled';
+      message = 'Robô desativado. Ative nas configurações para conectar o WhatsApp.';
+    }
+
     fs.writeFileSync(STATUS_FILE, JSON.stringify({
       qrUrl: qrAvailable && !isConnected ? '/whatsapp-qr.png' : null,
       pairingCode: lastPairingCode,
       connected: isConnected,
       phone: currentPhone,
-      state: isConnected ? 'connected' : (lastPairingCode ? 'pairing' : (qrAvailable ? 'qr' : 'connecting')),
-      message: isConnected
-        ? `Conectado: ${currentPhone || ''}`
-        : (lastPairingCode ? `Código de pareamento: ${lastPairingCode}` : (qrAvailable ? 'QR Code ativo. Escaneie com o WhatsApp.' : 'Iniciando servidor...')),
+      robotEnabled,
+      activationPending,
+      state,
+      message,
       updatedAt: new Date().toISOString(),
       ...override,
     }, null, 2));
@@ -67,11 +101,8 @@ async function saveQrImage(qrData) {
 
 /* ── Phone normalization ── */
 function normalizePhone(phone) {
-  // Remove everything after @ (c.us, g.us, lid, etc)
   const id = phone.split('@')[0];
-  // Keep only digits
   const digits = id.replace(/\D/g, '');
-  // Remove Brazil country code if present
   return digits.replace(/^55/, '');
 }
 
@@ -82,19 +113,20 @@ function shouldRespond(sender) {
   console.log(`[WhatsApp] Mensagem recebida de: ${sender} (normalizado: ${senderClean})`);
   console.log(`[WhatsApp] Config - enabled: ${config.enabled}, testNumbers: ${JSON.stringify(config.testNumbers)}`);
 
-  // Ignore group chats and broadcast lists
-  if (sender.endsWith('@g.us') || sender.endsWith('@lid')) {
-    console.log('[WhatsApp] Ignorando grupo/lista de transmissão');
+  if (sender.endsWith('@g.us') || sender.endsWith('@newsletter')) {
+    console.log('[WhatsApp] Ignorando grupo/newsletter');
     return false;
   }
 
-  // If robot is enabled, respond to everyone
   if (config.enabled === true) {
-    console.log('[WhatsApp] Robô ATIVADO - respondendo!');
+    if (!isConnected) {
+      console.log('[WhatsApp] Robô ativado mas NÃO CONECTADO - ignorando');
+      return false;
+    }
+    console.log('[WhatsApp] Robô ATIVADO e CONECTADO - respondendo!');
     return true;
   }
 
-  // If number is in test list, respond even with robot disabled
   if (config.testNumbers && config.testNumbers.length > 0) {
     const match = config.testNumbers.some((num) => {
       const normalized = normalizePhone(num);
@@ -142,6 +174,8 @@ client.on('ready', () => {
   const info = client.info;
   currentPhone = info?.wid?.user || null;
   isConnected = true;
+  robotEnabled = true;
+  activationPending = false;
   qrAvailable = false;
   lastPairingCode = null;
   console.log(`[WhatsApp] ✅ CONECTADO! Número: ${currentPhone || 'Desconhecido'}`);
@@ -162,71 +196,199 @@ client.on('auth_failure', (msg) => {
 client.on('disconnected', (reason) => {
   console.log('[WhatsApp] Desconectado:', reason);
   isConnected = false;
+  robotEnabled = false;
   currentPhone = null;
   qrAvailable = false;
   lastPairingCode = null;
   saveStatus();
   try { fs.unlinkSync(QR_IMAGE_FILE); } catch {}
-  setTimeout(() => {
-    console.log('[WhatsApp] Reiniciando...');
-    client.initialize();
-  }, 5000);
+  if (clientInitialized) {
+    setTimeout(() => {
+      console.log('[WhatsApp] Reiniciando...');
+      client.initialize();
+    }, 5000);
+  }
 });
 
 client.on('message', async (msg) => {
   if (msg.fromMe) return;
+
+  // Segurança: nunca responde se o robô está desativado
+  if (!robotEnabled) {
+    return;
+  }
+
   const text = msg.body || '';
   console.log(`[WhatsApp] 📨 NOVA MENSAGEM de "${msg.from}" -> "${text.substring(0, 50)}"`);
 
-  // Check if should respond
   if (!shouldRespond(msg.from)) {
     return;
   }
 
   const config = loadConfig();
-  let reply = null;
+  const reply = config.welcomeMessage || '👋 Olá! Bem-vindo! Sou o assistente virtual.';
 
-  // Check configured keywords
-  if (config.keywords && config.keywords.length > 0) {
-    for (const kw of config.keywords) {
-      const kwList = kw.keywords.split(',').map((k) => k.trim().toLowerCase());
-      if (kwList.some((k) => text.includes(k))) {
-        reply = kw.response;
-        break;
-      }
-    }
-  }
-
-  // Default greeting if no keyword matched
-  if (!reply && (text.includes('oi') || text.includes('olá') || text.includes('ola') || text.includes('bom dia') || text.includes('boa tarde') || text.includes('boa noite'))) {
-    reply = config.welcomeMessage || '👋 Olá! Bem-vindo! Sou o assistente virtual.';
-  }
-
-  if (reply) {
-    try {
-      await msg.reply(reply);
-      console.log(`[WhatsApp] ✅ Resposta enviada para ${msg.from}`);
-    } catch (e) {
-      console.error('[WhatsApp] Erro ao enviar:', e.message);
-    }
+  try {
+    await msg.reply(reply);
+    console.log(`[WhatsApp] ✅ Resposta de boas-vindas enviada para ${msg.from}`);
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao enviar:', e.message);
   }
 });
 
-// ===== API INTERNA PARA ENVIO DE MENSAGENS (usada pela API de pedidos) =====
+async function startClient() {
+  if (clientInitialized) return;
+  try {
+    console.log('[WhatsApp] Inicializando cliente WhatsApp...');
+    clientInitialized = true;
+    await client.initialize();
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao inicializar cliente:', e.message);
+    clientInitialized = false;
+    saveStatus({ state: 'error', message: `Erro ao iniciar: ${e.message}` });
+  }
+}
+
+async function stopClient() {
+  if (!clientInitialized) return;
+  try {
+    console.log('[WhatsApp] Parando cliente WhatsApp...');
+    await client.destroy();
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao parar cliente:', e.message);
+  }
+  clientInitialized = false;
+  isConnected = false;
+  currentPhone = null;
+  qrAvailable = false;
+  lastPairingCode = null;
+  try { fs.unlinkSync(QR_IMAGE_FILE); } catch {}
+}
+
 function formatWhatsAppId(phone) {
   const clean = phone.replace(/\D/g, '');
   const withCountry = clean.startsWith('55') && clean.length >= 12 ? clean : `55${clean}`;
   return `${withCountry}@c.us`;
 }
 
+async function setRobotEnabled(enabled) {
+  const config = loadConfig();
+  config.enabled = enabled;
+  saveConfig(config);
+
+  if (enabled) {
+    activationPending = true;
+    if (isConnected) {
+      robotEnabled = true;
+      console.log('[WhatsApp] Robô ativado (já conectado).');
+    } else {
+      robotEnabled = false;
+      console.log('[WhatsApp] Ativação iniciada. Aguardando leitura do QR Code ou código de pareamento.');
+    }
+    saveStatus();
+  } else {
+    activationPending = false;
+    robotEnabled = false;
+    saveStatus();
+    console.log('[WhatsApp] Robô desativado. Cliente continua rodando em background.');
+  }
+}
+
 const httpServer = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      robotEnabled,
+      activationPending,
+      clientInitialized,
+      isConnected,
+      qrAvailable,
+      qrUrl: qrAvailable && !isConnected ? '/whatsapp-qr.png' : null,
+      pairingCode: lastPairingCode,
+    }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/toggle') {
+    const newState = !robotEnabled && !activationPending;
+    console.log(`[WhatsApp] Alternando estado do robô: ${robotEnabled || activationPending} -> ${newState}`);
+    await setRobotEnabled(newState);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, robotEnabled, activationPending, clientInitialized, isConnected }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/enable') {
+    console.log('[WhatsApp] Ativando robô...');
+    await setRobotEnabled(true);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      robotEnabled,
+      activationPending,
+      clientInitialized,
+      isConnected,
+      qrAvailable,
+      qrUrl: qrAvailable && !isConnected ? '/whatsapp-qr.png' : null,
+      pairingCode: lastPairingCode,
+      message: robotEnabled
+        ? 'Robô ativado e conectado!'
+        : qrAvailable
+          ? 'QR Code disponível! Escaneie para conectar.'
+          : 'Robô em processo de ativação. Leia o QR Code ou use o código de pareamento para conectar.',
+    }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/disable') {
+    console.log('[WhatsApp] Desativando robô...');
+    await setRobotEnabled(false);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, robotEnabled, activationPending, clientInitialized, isConnected }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/logout') {
+    console.log('[WhatsApp] Desconectando e limpando sessão...');
+    try {
+      await setRobotEnabled(false);
+      if (clientInitialized) {
+        await client.logout();
+        console.log('[WhatsApp] ✅ Sessão encerrada.');
+      }
+      // Limpa auth local
+      const fs = require('fs');
+      const path = require('path');
+      const authDir = path.join(__dirname, '..', 'prisma', 'baileys-auth');
+      if (fs.existsSync(authDir)) {
+        fs.rmSync(authDir, { recursive: true, force: true });
+        fs.mkdirSync(authDir, { recursive: true });
+      }
+      clientInitialized = false;
+      isConnected = false;
+      currentPhone = null;
+      qrAvailable = false;
+      lastPairingCode = null;
+      try { fs.unlinkSync(QR_IMAGE_FILE); } catch {}
+      saveStatus({ state: 'disabled', message: 'Desconectado. Clique em Ativar para conectar novamente.' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Desconectado com sucesso.' }));
+    } catch (e) {
+      console.error('[WhatsApp] Erro ao desconectar:', e.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: e.message }));
+    }
     return;
   }
 
@@ -241,9 +403,19 @@ const httpServer = http.createServer(async (req, res) => {
           res.end(JSON.stringify({ success: false, error: 'Missing to or message' }));
           return;
         }
-        if (!isConnected) {
+        if (!robotEnabled && !activationPending) {
           res.writeHead(503, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false, error: 'WhatsApp not connected' }));
+          res.end(JSON.stringify({ success: false, error: 'WhatsApp robot is disabled' }));
+          return;
+        }
+        if (!robotEnabled || !isConnected) {
+          res.writeHead(503, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Não é possível conectar porque você não está conectado no whatsapp',
+            state: qrAvailable ? 'qr' : (activationPending ? 'awaiting_connection' : 'disabled'),
+            qrUrl: qrAvailable && !isConnected ? '/whatsapp-qr.png' : null,
+          }));
           return;
         }
 
@@ -267,9 +439,8 @@ const httpServer = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ success: false, error: 'Not found' }));
 });
 
-// Monitora pedido de pairing code
 setInterval(async () => {
-  if (isConnected) return;
+  if (isConnected || !clientInitialized || !activationPending) return;
   try {
     if (fs.existsSync(PAIRING_REQUEST_FILE)) {
       const req = JSON.parse(fs.readFileSync(PAIRING_REQUEST_FILE, 'utf-8'));
@@ -289,17 +460,33 @@ setInterval(async () => {
   }
 }, 2000);
 
-console.log('[WhatsApp] Iniciando servidor...');
-saveStatus();
-client.initialize();
+async function init() {
+  const config = loadConfig();
+  if (config.enabled === true) {
+    activationPending = true;
+    robotEnabled = false;
+  }
 
-httpServer.listen(3001, () => {
-  console.log('[WhatsApp] API de envio interna rodando em http://localhost:3001');
-});
+  console.log('[WhatsApp] Iniciando servidor...');
+  saveStatus();
 
-process.on('SIGINT', () => {
+  // Cliente sempre inicia em background para QR ficar disponível rapidamente
+  console.log('[WhatsApp] Iniciando cliente WhatsApp em background...');
+  await startClient();
+
+  httpServer.listen(3001, () => {
+    console.log('[WhatsApp] API de envio interna rodando em http://localhost:3001');
+  });
+}
+
+init();
+
+process.on('SIGINT', async () => {
   console.log('\n[WhatsApp] Desligando...');
   saveStatus({ connected: false, phone: null, state: 'stopped', message: 'Servidor parado' });
   httpServer.close();
-  client.destroy().then(() => process.exit(0));
+  if (clientInitialized) {
+    await client.destroy();
+  }
+  process.exit(0);
 });

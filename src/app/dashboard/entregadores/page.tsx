@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  Bike, Plus, Pencil, Trash2, Car, Phone, CheckCircle2, Clock,
+  Plus, Pencil, Trash2, Car, Phone, CheckCircle2, Clock,
   Package, DollarSign, MapPin, Search, TrendingUp, Users, Activity,
   ChevronRight, History, AlertCircle, CheckCircle, XCircle, CreditCard,
   ClipboardCheck
@@ -12,6 +12,7 @@ import EntregadorForm from './components/EntregadorForm';
 import HistoricoDrawer from './components/HistoricoDrawer';
 import FechamentoModal from './components/FechamentoModal';
 import { useCelebration } from './components/ConfettiCelebration';
+import MotoIcon from '@/components/MotoIcon';
 import Link from 'next/link';
 
 interface Assignment {
@@ -198,7 +199,7 @@ export default function EntregadoresPage() {
   };
 
   const vehicleIcon = (v: string) => {
-    if (v === 'MOTO') return <Bike className="h-3.5 w-3.5" />;
+    if (v === 'MOTO') return <MotoIcon className="h-3.5 w-3.5" />;
     if (v === 'CARRO') return <Car className="h-3.5 w-3.5" />;
     return <MapPin className="h-3.5 w-3.5" />;
   };
@@ -358,7 +359,7 @@ export default function EntregadoresPage() {
         </div>
       ) : filteredPeople.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
-          <Bike className="h-14 w-14 mx-auto mb-4 opacity-20" />
+          <MotoIcon className="h-14 w-14 mx-auto mb-4 opacity-20" />
           <p className="text-sm">{search || filterStatus !== 'todos' ? 'Nenhum entregador encontrado' : 'Nenhum entregador cadastrado'}</p>
           <p className="text-xs text-gray-600 mt-1">{search || filterStatus !== 'todos' ? 'Tente ajustar os filtros' : 'Clique em "Novo Entregador" para começar'}</p>
         </div>

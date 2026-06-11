@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ShoppingBag, DollarSign, Users, TrendingUp, Clock, ChefHat,
-  Bike, CheckCircle, Package, AlertCircle, Star, ArrowUpRight, ArrowDownRight
+  CheckCircle, Package, AlertCircle, Star, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
+import MotoIcon from '@/components/MotoIcon';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar
@@ -30,7 +31,7 @@ interface StoreData {
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   NOVO: { label: 'Novo', color: 'text-blue-400', bg: 'bg-blue-500', icon: Clock },
   EM_PREPARO: { label: 'Em preparo', color: 'text-yellow-400', bg: 'bg-yellow-500', icon: ChefHat },
-  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-purple-400', bg: 'bg-purple-500', icon: Bike },
+  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-purple-400', bg: 'bg-purple-500', icon: MotoIcon },
   PRONTO_RETIRADA: { label: 'Pronto', color: 'text-cyan-400', bg: 'bg-cyan-500', icon: Package },
   ENTREGUE: { label: 'Entregue', color: 'text-green-400', bg: 'bg-green-500', icon: CheckCircle },
   CANCELADO: { label: 'Cancelado', color: 'text-red-400', bg: 'bg-red-500', icon: AlertCircle },

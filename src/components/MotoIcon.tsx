@@ -9,8 +9,9 @@ export default function MotoIcon({ className = 'h-5 w-5' }: Props) {
     <img
       src="/uploads/download.png"
       alt="Moto"
-      className={`${className} w-full h-full`}
-      style={{ objectFit: 'cover', objectPosition: 'center' }}
+      className={`${className} block`}
+      style={{ objectFit: 'contain' }}
+      draggable={false}
     />
   );
 }

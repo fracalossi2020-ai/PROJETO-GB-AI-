@@ -129,11 +129,11 @@ export function useFinanceiroData() {
   });
 
   useEffect(() => {
-    fetch('/api/stores')
+    fetch('/api/financeiro')
       .then(r => r.json())
       .then(d => {
-        if (d.data?.[0]) {
-          setStore(d.data[0]);
+        if (d.data) {
+          setStore(d.data);
         }
         setLoading(false);
       })

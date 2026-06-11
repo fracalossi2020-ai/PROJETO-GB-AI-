@@ -107,6 +107,7 @@ model Store {
   customers      Customer[]
   orders         Order[]
   deliveryZones  DeliveryZone[]
+  deliveryPeople DeliveryPerson[]
   businessHours  BusinessHour[]
   tables         Table[]
 
@@ -230,6 +231,7 @@ model Order {
   customer   Customer @relation(fields: [customerId], references: [id])
 
   items OrderItem[]
+  deliveryAssignments DeliveryAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -284,6 +286,46 @@ model DeliveryZone {
   store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@map("delivery_zones")
+}
+
+model DeliveryPerson {
+  id       String  @id @default(cuid())
+  code     String? // E1, E2, E3...
+  name     String
+  phone    String?
+  vehicle  String  @default("MOTO") // MOTO, BIKE, CARRO
+  isActive Boolean @default(true)
+  feePerDelivery Float @default(0)
+
+  storeId String
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  assignments DeliveryAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, code])
+  @@map("delivery_people")
+}
+
+model DeliveryAssignment {
+  id     String @id @default(cuid())
+  status String @default("PENDENTE") // PENDENTE, EM_ANDAMENTO, ENTREGUE, CANCELADO
+  fee    Float  @default(0)
+  paid   Boolean @default(false)
+  paidAt DateTime?
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  deliveryPersonId String
+  deliveryPerson   DeliveryPerson @relation(fields: [deliveryPersonId], references: [id], onDelete: Cascade)
+
+  assignedAt  DateTime  @default(now())
+  deliveredAt DateTime?
+
+  @@map("delivery_assignments")
 }
 
 model Table {

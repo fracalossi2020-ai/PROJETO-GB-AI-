@@ -5,16 +5,15 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Package, Search, Clock, ChefHat, CheckCircle,
+  ArrowLeft, Package, Search, Clock, ChefHat, Bike, CheckCircle,
   MapPin, Phone, CreditCard, AlertCircle, ShoppingBag, Eye
 } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
 import { GridPattern, GlowOrb } from '@/components/GridPattern';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any; glow: string }> = {
   NOVO: { label: 'Novo', color: 'text-blue-400', bg: 'bg-blue-500', icon: Clock, glow: 'shadow-[0_0_15px_rgba(59,130,246,0.4)]' },
   EM_PREPARO: { label: 'Em preparo', color: 'text-yellow-400', bg: 'bg-yellow-500', icon: ChefHat, glow: 'shadow-[0_0_15px_rgba(234,179,8,0.4)]' },
-  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-[#ff9607]', bg: 'bg-[#ff9607]', icon: MotoIcon, glow: 'shadow-[0_0_15px_rgba(255,150,7,0.4)]' },
+  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-purple-400', bg: 'bg-purple-500', icon: Bike, glow: 'shadow-[0_0_15px_rgba(168,85,247,0.4)]' },
   PRONTO_RETIRADA: { label: 'Pronto', color: 'text-cyan-400', bg: 'bg-cyan-500', icon: Package, glow: 'shadow-[0_0_15px_rgba(6,182,212,0.4)]' },
   ENTREGUE: { label: 'Entregue', color: 'text-green-400', bg: 'bg-green-500', icon: CheckCircle, glow: 'shadow-[0_0_15px_rgba(34,197,94,0.4)]' },
   CANCELADO: { label: 'Cancelado', color: 'text-red-400', bg: 'bg-red-500', icon: AlertCircle, glow: 'shadow-[0_0_15px_rgba(239,68,68,0.4)]' },

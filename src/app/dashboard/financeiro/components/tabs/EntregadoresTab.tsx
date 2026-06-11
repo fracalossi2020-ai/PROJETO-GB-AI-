@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Truck, Plus, Pencil, Trash2, Car, Phone, CheckCircle, Clock, Package, DollarSign, MapPin } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
+import { Truck, Plus, Pencil, Trash2, Bike, Car, Phone, CheckCircle, Clock, Package, DollarSign, MapPin } from 'lucide-react';
 import ExportarPdf from '../ExportarPdf';
 
 interface DeliveryPerson {
@@ -208,7 +207,7 @@ export default function EntregadoresTab() {
 
                 <div className="flex items-center gap-2 mb-3">
                   <span className="px-2 py-0.5 rounded-md bg-white/5 text-xs text-gray-400 flex items-center gap-1">
-                    {person.vehicle === 'MOTO' ? <MotoIcon className="h-3 w-3" /> : person.vehicle === 'BIKE' ? <MapPin className="h-3 w-3" /> : <Car className="h-3 w-3" />}
+                    {person.vehicle === 'MOTO' ? <Bike className="h-3 w-3" /> : person.vehicle === 'BIKE' ? <MapPin className="h-3 w-3" /> : <Car className="h-3 w-3" />}
                     {person.vehicle}
                   </span>
                   <span className="px-2 py-0.5 rounded-md bg-white/5 text-xs text-gray-400">

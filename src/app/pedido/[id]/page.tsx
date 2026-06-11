@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, ChefHat, CheckCircle, ArrowLeft, Package } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
+import { Clock, ChefHat, Bike, CheckCircle, ArrowLeft, Package } from 'lucide-react';
 import { GridPattern, GlowOrb } from '@/components/GridPattern';
 
 const steps = [
   { key: 'NOVO', label: 'Pedido recebido', icon: Clock, color: 'bg-blue-500', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.4)]' },
   { key: 'EM_PREPARO', label: 'Em preparo', icon: ChefHat, color: 'bg-yellow-500', glow: 'shadow-[0_0_15px_rgba(234,179,8,0.4)]' },
-  { key: 'SAIU_PARA_ENTREGA', label: 'Saiu para entrega', icon: MotoIcon, color: 'bg-[#ff9607]', glow: 'shadow-[0_0_15px_rgba(255,150,7,0.4)]' },
+  { key: 'SAIU_PARA_ENTREGA', label: 'Saiu para entrega', icon: Bike, color: 'bg-purple-500', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.4)]' },
   { key: 'PRONTO_RETIRADA', label: 'Pronto para retirada', icon: Package, color: 'bg-cyan-500', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.4)]' },
   { key: 'ENTREGUE', label: 'Entregue', icon: CheckCircle, color: 'bg-green-500', glow: 'shadow-[0_0_15px_rgba(34,197,94,0.4)]' },
 ];

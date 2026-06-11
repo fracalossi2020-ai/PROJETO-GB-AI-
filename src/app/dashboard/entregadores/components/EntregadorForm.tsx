@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Car, MapPin } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
+import { X, Bike, Car, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DeliveryPerson {
@@ -115,7 +114,7 @@ export default function EntregadorForm({ open, editing, onClose, onSave }: Props
                 <label className="block text-xs text-gray-400 mb-1.5">Veículo</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { key: 'MOTO', icon: MotoIcon, label: 'Moto' },
+                    { key: 'MOTO', icon: Bike, label: 'Moto' },
                     { key: 'BIKE', icon: MapPin, label: 'Bike' },
                     { key: 'CARRO', icon: Car, label: 'Carro' },
                   ].map(v => (

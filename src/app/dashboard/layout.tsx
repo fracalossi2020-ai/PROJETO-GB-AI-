@@ -6,9 +6,8 @@ import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Users, Wallet,
   Settings, LogOut, Store, Bell, Bot, BarChart3, ChevronLeft, ChevronRight,
-  Share2
+  Share2, Bike
 } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
 import { useAuth } from '@/stores/auth';
 
 const menu = [
@@ -16,7 +15,7 @@ const menu = [
   { href: '/dashboard/pedidos', label: 'Pedidos', icon: ShoppingBag },
   { href: '/dashboard/cardapio', label: 'Cardápio', icon: UtensilsCrossed },
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
-  { href: '/dashboard/entregadores', label: 'Entregadores', icon: MotoIcon },
+  { href: '/dashboard/entregadores', label: 'Entregadores', icon: Bike },
   { href: '/dashboard/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/dashboard/robot', label: 'Robô WhatsApp', icon: Bot },
   { href: '/dashboard/compartilhar', label: 'Link da Loja', icon: Share2 },

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, ChefHat, CheckCircle, XCircle, Volume2, VolumeX } from 'lucide-react';
-import MotoIcon from '@/components/MotoIcon';
+import { Clock, ChefHat, Bike, CheckCircle, XCircle, Volume2, VolumeX } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -17,7 +16,7 @@ interface Order {
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any; next: string | null }> = {
   NOVO: { label: 'Novo', color: 'text-blue-400', bg: 'bg-blue-500', icon: Clock, next: 'EM_PREPARO' },
   EM_PREPARO: { label: 'Em Preparo', color: 'text-yellow-400', bg: 'bg-yellow-500', icon: ChefHat, next: 'SAIU_PARA_ENTREGA' },
-  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-[#ff9607]', bg: 'bg-[#ff9607]', icon: MotoIcon, next: 'ENTREGUE' },
+  SAIU_PARA_ENTREGA: { label: 'Saiu', color: 'text-purple-400', bg: 'bg-purple-500', icon: Bike, next: 'ENTREGUE' },
   ENTREGUE: { label: 'Entregue', color: 'text-green-400', bg: 'bg-green-500', icon: CheckCircle, next: null },
   CANCELADO: { label: 'Cancelado', color: 'text-red-400', bg: 'bg-red-500', icon: XCircle, next: null },
 };

@@ -111,6 +111,47 @@ function normalizePhone(phone) {
   return digits.replace(/^55/, '');
 }
 
+/* ── Fetch helpers para API interna ── */
+async function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch (e) { resolve(null); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(5000, () => { req.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+async function getStoreSlug() {
+  try {
+    const data = await fetchJson('http://localhost:3000/api/stores');
+    if (data?.success && data.data?.length > 0) {
+      return data.data[0].slug || 'loja';
+    }
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao buscar slug:', e.message);
+  }
+  return 'loja';
+}
+
+async function getCustomerOrders(phone) {
+  try {
+    const slug = await getStoreSlug();
+    const data = await fetchJson(`http://localhost:3000/api/orders/by-customer?storeSlug=${slug}&phone=${encodeURIComponent(phone)}`);
+    if (data?.success && data.data?.orders?.length > 0) {
+      return { slug, orders: data.data.orders };
+    }
+    return { slug, orders: [] };
+  } catch (e) {
+    console.error('[WhatsApp] Erro ao buscar pedidos:', e.message);
+    return { slug: 'loja', orders: [] };
+  }
+}
+
 function shouldRespond(sender) {
   const config = loadConfig();
   const senderClean = normalizePhone(sender);
@@ -239,12 +280,21 @@ client.on('message', async (msg) => {
   const textTrimmed = text.trim();
   const textLower = text.toLowerCase();
   let reply = null;
+  let isOrderQuery = false;
 
   // 1. Verifica se digitou um número de menu (1, 2, 3...)
   const menuNumber = parseInt(textTrimmed, 10);
   if (!isNaN(menuNumber) && menuNumber > 0 && config.keywords && config.keywords.length >= menuNumber) {
     reply = config.keywords[menuNumber - 1].response;
     console.log(`[WhatsApp] Opção de menu ${menuNumber} selecionada.`);
+    // Detecta se escolheu a opção de pedido/status (geralmente opção 3)
+    const kw = config.keywords[menuNumber - 1];
+    if (kw && kw.keywords) {
+      const kwLower = kw.keywords.toLowerCase();
+      if (kwLower.includes('pedido') || kwLower.includes('status')) {
+        isOrderQuery = true;
+      }
+    }
   }
 
   // 2. Verifica palavras-chave configuradas (para quem prefere digitar)
@@ -253,12 +303,32 @@ client.on('message', async (msg) => {
       const kwList = kw.keywords.split(',').map((k) => k.trim().toLowerCase());
       if (kwList.some((k) => textLower.includes(k))) {
         reply = kw.response;
+        if (kwList.some((k) => k.includes('pedido') || k.includes('status'))) {
+          isOrderQuery = true;
+        }
         break;
       }
     }
   }
 
-  // 3. Se não achou nada, manda mensagem de boas-vindas
+  // 3. Se for consulta de pedido, busca automaticamente os pedidos do cliente
+  if (isOrderQuery) {
+    const senderPhone = normalizePhone(msg.from);
+    console.log(`[WhatsApp] Buscando pedidos para ${senderPhone}...`);
+    const { slug, orders } = await getCustomerOrders(senderPhone);
+    
+    if (orders.length > 0) {
+      const latest = orders[0];
+      const orderUrl = `http://localhost:3000/pedido/${latest.id}`;
+      reply = `📦 *Seu último pedido*\n\nPedido #${latest.orderNumber || latest.id.slice(-6)}\nStatus: ${latest.status}\n\nAcompanhe aqui:\n${orderUrl}\n\nVeja todos os seus pedidos:\nhttp://localhost:3000/${slug}/meus-pedidos`;
+      console.log(`[WhatsApp] Pedido encontrado: ${latest.id}`);
+    } else {
+      reply = `📦 Não encontramos pedidos vinculados a este número.\n\nVeja seus pedidos aqui:\nhttp://localhost:3000/${slug}/meus-pedidos\n\nOu acesse nosso cardápio:\nhttp://localhost:3000/${slug}`;
+      console.log(`[WhatsApp] Nenhum pedido encontrado para ${senderPhone}`);
+    }
+  }
+
+  // 4. Se não achou nada, manda mensagem de boas-vindas
   if (!reply) {
     reply = config.welcomeMessage || '👋 Olá! Bem-vindo!\n\nSou o assistente virtual.';
   }

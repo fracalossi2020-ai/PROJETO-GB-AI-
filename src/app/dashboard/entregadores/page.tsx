@@ -369,8 +369,6 @@ export default function EntregadoresPage() {
             {filteredPeople.map((person, idx) => {
               const periodAssignments = person.assignments.filter(a => isWithinPeriod(a.assignedAt, period));
               const entregues = periodAssignments.filter(a => a.status === 'ENTREGUE');
-              const pendentes = periodAssignments.filter(a => a.status === 'PENDENTE' || a.status === 'EM_ANDAMENTO');
-              const canceladas = periodAssignments.filter(a => a.status === 'CANCELADO');
               const taxas = entregues.reduce((s, a) => s + a.fee, 0);
               const taxasPendentes = entregues.filter(a => !a.paid).reduce((s, a) => s + a.fee, 0);
               const totalHistorico = person.assignments.length;
@@ -442,18 +440,10 @@ export default function EntregadoresPage() {
                   </div>
 
                   {/* Stats grid */}
-                  <div className="grid grid-cols-4 gap-2 mb-4">
+                  <div className="grid grid-cols-2 gap-2 mb-4">
                     <div className="text-center bg-white/[0.02] rounded-xl p-2 border border-white/5">
                       <p className="text-lg font-bold">{entregues.length}</p>
                       <p className="text-[10px] text-gray-500">Entregues</p>
-                    </div>
-                    <div className="text-center bg-white/[0.02] rounded-xl p-2 border border-white/5">
-                      <p className="text-lg font-bold text-blue-400">{pendentes.length}</p>
-                      <p className="text-[10px] text-gray-500">Pendentes</p>
-                    </div>
-                    <div className="text-center bg-white/[0.02] rounded-xl p-2 border border-white/5">
-                      <p className="text-lg font-bold text-red-400">{canceladas.length}</p>
-                      <p className="text-[10px] text-gray-500">Canceladas</p>
                     </div>
                     <div className="text-center bg-white/[0.02] rounded-xl p-2 border border-white/5">
                       <p className="text-lg font-bold text-green-400">R$ {taxas.toFixed(0)}</p>

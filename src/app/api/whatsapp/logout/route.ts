@@ -1,6 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);

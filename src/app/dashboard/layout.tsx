@@ -6,9 +6,10 @@ import Link from 'next/link';
 import {
   LayoutDashboard, ShoppingBag, UtensilsCrossed, Users, Wallet,
   Settings, LogOut, Store, Bell, Bot, BarChart3, ChevronLeft, ChevronRight,
-  Share2, Bike
+  Share2, Bike, Crown
 } from 'lucide-react';
 import { useAuth } from '@/stores/auth';
+import { apiFetch } from '@/lib/api-client';
 
 const menu = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
@@ -20,6 +21,7 @@ const menu = [
   { href: '/dashboard/robot', label: 'Robô WhatsApp', icon: Bot },
   { href: '/dashboard/compartilhar', label: 'Link da Loja', icon: Share2 },
   { href: '/dashboard/configuracoes', label: 'Configurações', icon: Settings },
+  { href: '/dashboard/assinatura', label: 'Assinatura', icon: Crown },
 ];
 
 function LoadingScreen() {
@@ -45,6 +47,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
+  // Intercepta fetch para adicionar token JWT automaticamente nas chamadas /api/
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const originalFetch = window.fetch;
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.startsWith('/api/')) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const headers = new Headers(init?.headers);
+          if (!headers.has('Authorization')) {
+            headers.set('Authorization', `Bearer ${token}`);
+          }
+          init = { ...init, headers };
+        }
+      }
+      return originalFetch(input, init);
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
   // Verifica autenticação apenas após montagem completa
   useEffect(() => {
     if (!mounted) return;
@@ -59,7 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (isAuth && user) return;
 
     // Verifica token no servidor e restaura sessão se necessário
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    apiFetch('/api/auth/me')
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;

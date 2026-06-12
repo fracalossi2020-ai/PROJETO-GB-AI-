@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Store, Clock, CreditCard, Truck, Palette } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
+
+interface BusinessHour {
+  id: string;
+  dayOfWeek: number;
+  openTime: string;
+  closeTime: string;
+  isOpen: boolean;
+}
 
 interface StoreData {
   id: string;
@@ -15,6 +24,19 @@ interface StoreData {
   isOpen: boolean;
   autoAcceptOrders: boolean;
   autoPrint: boolean;
+  acceptCash: boolean;
+  acceptCard: boolean;
+  acceptPix: boolean;
+  acceptOnlineCard: boolean;
+  pixKey: string;
+  deliveryFee: number;
+  minOrderValue: number;
+  deliveryTimeMin: number;
+  deliveryTimeMax: number;
+  hasDelivery: boolean;
+  hasPickup: boolean;
+  hasDineIn: boolean;
+  businessHours: BusinessHour[];
 }
 
 export default function ConfiguracoesPage() {
@@ -35,10 +57,23 @@ export default function ConfiguracoesPage() {
     isOpen: true,
     autoAcceptOrders: false,
     autoPrint: false,
+    acceptCash: true,
+    acceptCard: true,
+    acceptPix: true,
+    acceptOnlineCard: false,
+    pixKey: '',
+    deliveryFee: 0,
+    minOrderValue: 0,
+    deliveryTimeMin: 30,
+    deliveryTimeMax: 60,
+    hasDelivery: true,
+    hasPickup: true,
+    hasDineIn: false,
+    businessHours: [],
   });
 
   useEffect(() => {
-    fetch('/api/stores')
+    apiFetch('/api/stores')
       .then(r => r.json())
       .then(d => {
         if (d.data?.[0]) {
@@ -55,6 +90,19 @@ export default function ConfiguracoesPage() {
             isOpen: s.isOpen ?? true,
             autoAcceptOrders: s.autoAcceptOrders ?? false,
             autoPrint: s.autoPrint ?? false,
+            acceptCash: s.acceptCash ?? true,
+            acceptCard: s.acceptCard ?? true,
+            acceptPix: s.acceptPix ?? true,
+            acceptOnlineCard: s.acceptOnlineCard ?? false,
+            pixKey: s.pixKey || '',
+            deliveryFee: s.deliveryFee || 0,
+            minOrderValue: s.minOrderValue || 0,
+            deliveryTimeMin: s.deliveryTimeMin || 30,
+            deliveryTimeMax: s.deliveryTimeMax || 60,
+            hasDelivery: s.hasDelivery ?? true,
+            hasPickup: s.hasPickup ?? true,
+            hasDineIn: s.hasDineIn ?? false,
+            businessHours: s.businessHours || [],
           });
         }
       })
@@ -66,10 +114,11 @@ export default function ConfiguracoesPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/stores/update', {
+      const res = await apiFetch('/api/stores/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: storeData.id,
           name: storeData.name,
           phone: storeData.phone,
           whatsapp: storeData.whatsapp,
@@ -80,6 +129,18 @@ export default function ConfiguracoesPage() {
           isOpen: storeData.isOpen,
           autoAcceptOrders: storeData.autoAcceptOrders,
           autoPrint: storeData.autoPrint,
+          acceptCash: storeData.acceptCash,
+          acceptCard: storeData.acceptCard,
+          acceptPix: storeData.acceptPix,
+          acceptOnlineCard: storeData.acceptOnlineCard,
+          pixKey: storeData.pixKey,
+          deliveryFee: storeData.deliveryFee,
+          minOrderValue: storeData.minOrderValue,
+          deliveryTimeMin: storeData.deliveryTimeMin,
+          deliveryTimeMax: storeData.deliveryTimeMax,
+          hasDelivery: storeData.hasDelivery,
+          hasPickup: storeData.hasPickup,
+          hasDineIn: storeData.hasDineIn,
         }),
       });
       const json = await res.json();
@@ -219,23 +280,112 @@ export default function ConfiguracoesPage() {
         )}
 
         {activeTab === 'horario' && (
-          <div className="text-center py-8 text-gray-500">
-            <p className="text-sm">Edição de horários será implementada em breve.</p>
-            <p className="text-xs mt-1">Os horários definidos no setup já estão ativos.</p>
+          <div className="space-y-3">
+            <h3 className="font-bold text-sm mb-1">Horário de funcionamento</h3>
+            {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
+              const bh = storeData.businessHours.find(b => b.dayOfWeek === idx);
+              return (
+                <div key={idx} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl">
+                  <span className="text-sm font-medium">{day}</span>
+                  <span className="text-sm text-gray-400">
+                    {bh?.isOpen ? `${bh.openTime} - ${bh.closeTime}` : 'Fechado'}
+                  </span>
+                </div>
+              );
+            })}
+            <p className="text-xs text-gray-500 mt-2">Para editar os horários, acesse o setup inicial.</p>
           </div>
         )}
 
         {activeTab === 'pagamento' && (
-          <div className="text-center py-8 text-gray-500">
-            <p className="text-sm">Edição de formas de pagamento será implementada em breve.</p>
-            <p className="text-xs mt-1">As formas de pagamento definidas no setup já estão ativas.</p>
+          <div className="space-y-4">
+            <h3 className="font-bold text-sm mb-1">Formas de pagamento aceitas</h3>
+            {[
+              { key: 'acceptCash', label: 'Dinheiro' },
+              { key: 'acceptCard', label: 'Cartão na entrega' },
+              { key: 'acceptPix', label: 'PIX' },
+              { key: 'acceptOnlineCard', label: 'Cartão online' },
+            ].map((opt) => (
+              <label key={opt.key} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl cursor-pointer">
+                <span className="text-sm">{opt.label}</span>
+                <input
+                  type="checkbox"
+                  checked={storeData[opt.key as keyof StoreData] as boolean}
+                  onChange={e => setStoreData({ ...storeData, [opt.key]: e.target.checked })}
+                  className="w-5 h-5 accent-[#ff9607]"
+                />
+              </label>
+            ))}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2">Chave PIX</label>
+              <input
+                value={storeData.pixKey}
+                onChange={e => setStoreData({ ...storeData, pixKey: e.target.value })}
+                className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                placeholder="ex: pix@sualoja.com"
+              />
+            </div>
           </div>
         )}
 
         {activeTab === 'entrega' && (
-          <div className="text-center py-8 text-gray-500">
-            <p className="text-sm">Edição de zonas de entrega será implementada em breve.</p>
-            <p className="text-xs mt-1">As zonas definidas no setup já estão ativas.</p>
+          <div className="space-y-4">
+            <h3 className="font-bold text-sm mb-1">Modos de operação</h3>
+            {[
+              { key: 'hasDelivery', label: 'Delivery' },
+              { key: 'hasPickup', label: 'Retirada no local' },
+              { key: 'hasDineIn', label: 'Salão' },
+            ].map((opt) => (
+              <label key={opt.key} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl cursor-pointer">
+                <span className="text-sm">{opt.label}</span>
+                <input
+                  type="checkbox"
+                  checked={storeData[opt.key as keyof StoreData] as boolean}
+                  onChange={e => setStoreData({ ...storeData, [opt.key]: e.target.checked })}
+                  className="w-5 h-5 accent-[#ff9607]"
+                />
+              </label>
+            ))}
+
+            <h3 className="font-bold text-sm mb-1 mt-6">Taxas e prazos</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">Taxa de entrega padrão</label>
+                <input
+                  type="number"
+                  value={storeData.deliveryFee}
+                  onChange={e => setStoreData({ ...storeData, deliveryFee: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">Pedido mínimo</label>
+                <input
+                  type="number"
+                  value={storeData.minOrderValue}
+                  onChange={e => setStoreData({ ...storeData, minOrderValue: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">Tempo mínimo (min)</label>
+                <input
+                  type="number"
+                  value={storeData.deliveryTimeMin}
+                  onChange={e => setStoreData({ ...storeData, deliveryTimeMin: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-2">Tempo máximo (min)</label>
+                <input
+                  type="number"
+                  value={storeData.deliveryTimeMax}
+                  onChange={e => setStoreData({ ...storeData, deliveryTimeMax: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-[#050505]/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ff9607]"
+                />
+              </div>
+            </div>
           </div>
         )}
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Search, User, Phone, MapPin, ShoppingBag, Star } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 interface Customer {
   id: string;
@@ -18,7 +19,7 @@ export default function ClientesPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetch('/api/stores')
+    apiFetch('/api/stores')
       .then(r => r.json())
       .then(d => {
         if (d.data?.[0]?.customers) {

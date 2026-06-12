@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Bike, Car, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '@/lib/api-client';
 
 interface DeliveryPerson {
   id: string;
@@ -45,7 +46,7 @@ export default function EntregadorForm({ open, editing, onClose, onSave }: Props
     const body = editing ? { ...form, id: editing.id } : form;
 
     try {
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import {
   ShoppingBag, DollarSign, Users, TrendingUp, Clock, ChefHat,
@@ -44,7 +45,7 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState<'hoje' | 'semana' | 'mes'>('hoje');
 
   useEffect(() => {
-    fetch('/api/stores')
+    apiFetch('/api/stores')
       .then(r => r.json())
       .then(d => {
         if (d.data?.[0]) {

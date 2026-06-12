@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import Link from 'next/link';
 import {
   Search, Filter, Clock, ChefHat, Bike, CheckCircle, Package,
@@ -46,6 +47,27 @@ const PAYMENT_LABELS: Record<string, string> = {
   VALE_REFEICAO: 'Vale Refeição',
 };
 
+function playNotificationSound() {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + 0.3);
+  } catch {
+    // ignorar erro de áudio
+  }
+}
+
 export default function PedidosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,17 +75,36 @@ export default function PedidosPage() {
   const [statusFilter, setStatusFilter] = useState('TODOS');
   const [sortBy, setSortBy] = useState<'date' | 'total'>('date');
   const [sortDesc, setSortDesc] = useState(true);
+  const [newOrderAlert, setNewOrderAlert] = useState(false);
 
   useEffect(() => {
-    fetch('/api/stores')
-      .then(r => r.json())
-      .then(d => {
-        if (d.data?.[0]?.orders) {
-          setOrders(d.data[0].orders);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    let cancelled = false;
+    const loadOrders = () => {
+      apiFetch('/api/stores')
+        .then(r => r.json())
+        .then(d => {
+          if (cancelled) return;
+          if (d.data?.[0]?.orders) {
+            const newOrders = d.data[0].orders;
+            setOrders(prev => {
+              const prevIds = new Set(prev.map(o => o.id));
+              const hasNew = newOrders.some((o: Order) => !prevIds.has(o.id));
+              if (hasNew && prev.length > 0) {
+                playNotificationSound();
+                setNewOrderAlert(true);
+                setTimeout(() => setNewOrderAlert(false), 5000);
+              }
+              return newOrders;
+            });
+          }
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    };
+
+    loadOrders();
+    const interval = setInterval(loadOrders, 10000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   const filtered = useMemo(() => {
@@ -110,6 +151,13 @@ export default function PedidosPage() {
 
   return (
     <div className="space-y-5">
+      {newOrderAlert && (
+        <div className="bg-gradient-to-r from-[#ff9607] to-[#ff0080] text-black px-4 py-3 rounded-xl font-bold flex items-center gap-2 animate-pulse">
+          <span className="text-xl">🔔</span>
+          <span>Novo pedido recebido!</span>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">Pedidos</h1>

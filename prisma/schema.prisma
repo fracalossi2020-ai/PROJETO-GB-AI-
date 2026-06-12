@@ -24,14 +24,20 @@ model User {
 }
 
 model Subscription {
-  id        String    @id @default(cuid())
-  plan      String    @default("GRATUITO")
-  status    String    @default("ATIVO")
-  price     Float     @default(0)
-  expiresAt DateTime?
-  userId    String    @unique
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String    @id @default(cuid())
+  plan                     String    @default("GRATUITO")
+  status                   String    @default("ATIVO")
+  price                    Float     @default(0)
+  trialEndsAt              DateTime?
+  expiresAt                DateTime?
+  currentPeriodStart       DateTime?
+  currentPeriodEnd         DateTime?
+  lastPaymentAt            DateTime?
+  mercadoPagoPreapprovalId String?
+  userId                   String    @unique
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -178,9 +184,11 @@ model Customer {
 
 model Order {
   id            String      @id @default(cuid())
-  status        String      @default("NOVO")
-  type          String      @default("DELIVERY")
-  paymentMethod String      @default("PIX")
+  orderNumber   String?
+  status         String      @default("NOVO")
+  paymentStatus  String      @default("PENDENTE")
+  type           String      @default("DELIVERY")
+  paymentMethod  String      @default("PIX")
   changeFor     Float?
   subtotal      Float
   deliveryFee   Float       @default(0)
@@ -199,6 +207,7 @@ model Order {
   customer      Customer    @relation(fields: [customerId], references: [id])
 
   items         OrderItem[]
+  payments      Payment[]
   deliveryAssignments DeliveryAssignment[]
 
   createdAt     DateTime    @default(now())
@@ -288,6 +297,25 @@ model DeliveryAssignment {
   deliveredAt DateTime?
 
   @@map("delivery_assignments")
+}
+
+model Payment {
+  id                 String    @id @default(cuid())
+  amount             Float
+  method             String
+  status             String    @default("PENDENTE")
+  mercadoPagoId      String?
+  qrCode             String?
+  qrCodeBase64       String?
+  ticketUrl          String?
+  paidAt             DateTime?
+  metadata           String?
+  orderId            String
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("payments")
 }
 
 model Table {

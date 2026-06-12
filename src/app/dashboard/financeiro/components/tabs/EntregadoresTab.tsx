@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { Truck, Plus, Pencil, Trash2, Bike, Car, Phone, CheckCircle, Clock, Package, DollarSign, MapPin } from 'lucide-react';
 import ExportarPdf from '../ExportarPdf';
 
@@ -22,7 +23,7 @@ export default function EntregadoresTab() {
   const [form, setForm] = useState({ name: '', phone: '', vehicle: 'MOTO', feePerDelivery: 0 });
 
   useEffect(() => {
-    fetch('/api/delivery-people')
+    apiFetch('/api/delivery-people')
       .then(r => r.json())
       .then(d => {
         if (d.success) setPeople(d.data);
@@ -36,7 +37,7 @@ export default function EntregadoresTab() {
     const method = editing ? 'PUT' : 'POST';
     const body = editing ? { ...form, id: editing.id } : form;
 
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -47,7 +48,7 @@ export default function EntregadoresTab() {
       setEditing(null);
       setForm({ name: '', phone: '', vehicle: 'MOTO', feePerDelivery: 0 });
       // recarregar
-      const r2 = await fetch('/api/delivery-people');
+      const r2 = await apiFetch('/api/delivery-people');
       const d2 = await r2.json();
       if (d2.success) setPeople(d2.data);
     }
@@ -55,12 +56,12 @@ export default function EntregadoresTab() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja remover este entregador?')) return;
-    await fetch(`/api/delivery-people?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/delivery-people?id=${id}`, { method: 'DELETE' });
     setPeople(prev => prev.filter(p => p.id !== id));
   };
 
   const handleToggleActive = async (person: DeliveryPerson) => {
-    await fetch('/api/delivery-people', {
+    await apiFetch('/api/delivery-people', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...person, isActive: !person.isActive }),

@@ -8,6 +8,7 @@ import {
   DollarSign, Clock, Bike, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '@/lib/api-client';
 
 const DeliveryMap = dynamic(() => import('@/components/DeliveryMap'), { ssr: false });
 
@@ -37,7 +38,7 @@ export default function ZonasEntregaPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/delivery-zones');
+      const r = await apiFetch('/api/delivery-zones');
       const d = await r.json();
       if (d.success) setZones(d.data);
     } finally {
@@ -48,7 +49,7 @@ export default function ZonasEntregaPage() {
   useEffect(() => {
     load();
     // Tenta pegar endereço da loja
-    fetch('/api/stores')
+    apiFetch('/api/stores')
       .then(r => r.json())
       .then(d => {
         if (d.success && d.data?.address) {
@@ -78,7 +79,7 @@ export default function ZonasEntregaPage() {
   }
 
   const handleAddZone = async () => {
-    const res = await fetch('/api/delivery-zones', {
+    const res = await apiFetch('/api/delivery-zones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -94,12 +95,12 @@ export default function ZonasEntregaPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Remover esta zona?')) return;
-    await fetch(`/api/delivery-zones?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/delivery-zones?id=${id}`, { method: 'DELETE' });
     setZones(prev => prev.filter(z => z.id !== id));
   };
 
   const handleSaveEdit = async (zone: Zone) => {
-    const res = await fetch('/api/delivery-zones', {
+    const res = await apiFetch('/api/delivery-zones', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...zone, ...editForm, id: zone.id }),
@@ -320,7 +321,7 @@ export default function ZonasEntregaPage() {
                         <td className="px-5 py-3 text-center">
                           <button
                             onClick={async () => {
-                              const res = await fetch('/api/delivery-zones', {
+                              const res = await apiFetch('/api/delivery-zones', {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ ...zone, isActive: !zone.isActive }),

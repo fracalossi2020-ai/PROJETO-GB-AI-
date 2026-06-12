@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
 const CONFIG_FILE = path.join(process.cwd(), 'prisma', 'whatsapp-config.json');
 
@@ -20,7 +21,10 @@ function saveConfig(config: any) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify({ ...config, updatedAt: new Date().toISOString() }, null, 2));
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const config = loadConfig();
     return NextResponse.json({ success: true, data: config });
@@ -29,7 +33,10 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const body = await req.json();
     const current = loadConfig();

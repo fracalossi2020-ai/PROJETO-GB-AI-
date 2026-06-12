@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AI_TEMPLATES } from '@/lib/ai-templates';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
 function slugify(text: string) {
   return text
@@ -14,11 +15,13 @@ function slugify(text: string) {
     .replace(/\-\-+/g, '-');
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const body = await req.json();
     const {
-      userId,
       dados,
       pagamento,
       horario,
@@ -28,17 +31,16 @@ export async function POST(req: Request) {
       cardapioOption,
     } = body;
 
-    if (!userId || !dados?.name) {
-      return NextResponse.json({ success: false, message: 'userId e nome da loja são obrigatórios' }, { status: 400 });
+    if (!dados?.name) {
+      return NextResponse.json({ success: false, message: 'Nome da loja é obrigatório' }, { status: 400 });
     }
 
     const baseSlug = slugify(dados.name);
     const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
-    // Cria a loja
     const store = await prisma.store.create({
       data: {
-        userId,
+        userId: auth.userId,
         name: dados.name,
         slug,
         description: '',
@@ -65,7 +67,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // Horários de funcionamento
     if (Array.isArray(horario)) {
       await prisma.businessHour.createMany({
         data: horario.map((h: any, index: number) => ({
@@ -78,7 +79,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Zonas de entrega
     if (entrega?.hasDelivery && Array.isArray(entrega.zones)) {
       await prisma.deliveryZone.createMany({
         data: entrega.zones.map((z: any, index: number) => ({
@@ -94,7 +94,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Mesas
     if (salao?.hasDineIn && salao.tables > 0) {
       await prisma.table.createMany({
         data: Array.from({ length: Number(salao.tables) }, (_, i) => ({
@@ -105,7 +104,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Categorias e produtos do template se escolheu IA/manual com templates
     const templateType = Array.isArray(cardapioTemplates) ? cardapioTemplates[0] : null;
     if (templateType && AI_TEMPLATES[templateType] && cardapioOption === 'ia') {
       for (const catTemplate of AI_TEMPLATES[templateType]) {
@@ -133,7 +131,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: store }, { status: 201 });
   } catch (error: any) {
-    console.error('Setup error:', error);
     return NextResponse.json({ success: false, message: error.message || 'Erro ao criar loja' }, { status: 500 });
   }
 }

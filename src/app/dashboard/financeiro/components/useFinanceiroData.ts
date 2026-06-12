@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 export type Period = '7d' | '30d' | '90d' | 'mes' | 'mes_anterior';
 
@@ -129,7 +130,7 @@ export function useFinanceiroData() {
   });
 
   useEffect(() => {
-    fetch('/api/financeiro')
+    apiFetch('/api/financeiro')
       .then(r => r.json())
       .then(d => {
         if (d.data) {

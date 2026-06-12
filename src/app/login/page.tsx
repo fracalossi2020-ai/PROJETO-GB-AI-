@@ -7,10 +7,11 @@ import { useAuth } from '@/stores/auth';
 import { ArrowLeft, Eye, EyeOff, Sparkles, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GridPattern, GlowOrb } from '@/components/GridPattern';
+import { apiFetch } from '@/lib/api-client';
 
 async function redirectAfterAuth(router: ReturnType<typeof useRouter>) {
   try {
-    const res = await fetch('/api/stores', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const res = await apiFetch('/api/stores');
     const data = await res.json();
     if (data.data?.length > 0) {
       router.push('/dashboard');

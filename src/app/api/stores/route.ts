@@ -1,8 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   const stores = await prisma.store.findMany({
+    where: { userId: auth.userId },
     include: {
       categories: { include: { products: { include: { addons: true } } } },
       products: { include: { category: true, addons: true } },

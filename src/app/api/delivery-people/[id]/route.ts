@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuthAndSubscription, getStoreForUser } from '@/lib/api-auth';
 
-// GET: listar histórico de entregas de um entregador com detalhes do pedido
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const { id } = await params;
+    const person = await prisma.deliveryPerson.findUnique({
+      where: { id },
+      select: { storeId: true },
+    });
+
+    if (!person) {
+      return NextResponse.json({ success: false, message: 'Entregador não encontrado' }, { status: 404 });
+    }
+
+    const store = await getStoreForUser(auth.userId, person.storeId);
+    if (!store) {
+      return NextResponse.json({ success: false, message: 'Acesso negado' }, { status: 403 });
+    }
+
     const assignments = await prisma.deliveryAssignment.findMany({
       where: { deliveryPersonId: id },
       include: {
@@ -23,8 +40,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       },
       orderBy: { assignedAt: 'desc' },
     });
-
-    // Adiciona paid e paidAt que já vem do Prisma
 
     return NextResponse.json({ success: true, data: assignments });
   } catch (err) {

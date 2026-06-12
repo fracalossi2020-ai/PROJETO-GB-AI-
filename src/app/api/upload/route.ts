@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;

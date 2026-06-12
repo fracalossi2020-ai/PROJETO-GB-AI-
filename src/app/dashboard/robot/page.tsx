@@ -7,6 +7,7 @@ import {
   AlertTriangle, UserCheck
 } from 'lucide-react';
 import TechToast, { ToastData } from '@/components/TechToast';
+import { apiFetch } from '@/lib/api-client';
 
 interface KeywordResponse {
   id: string;
@@ -88,7 +89,7 @@ export default function RobotPage() {
   useEffect(() => {
     async function loadConfig() {
       try {
-        const res = await fetch('/api/whatsapp/config');
+        const res = await apiFetch('/api/whatsapp/config');
         const data = await res.json();
         if (data.success) {
           const cfg = data.data;
@@ -117,7 +118,7 @@ export default function RobotPage() {
 
     async function checkStatus() {
       try {
-        const res = await fetch('/api/whatsapp/status');
+        const res = await apiFetch('/api/whatsapp/status');
         const data = await res.json();
         if (data.success) {
           setWpStatus(data.data);
@@ -164,9 +165,9 @@ export default function RobotPage() {
     if (saving) return;
     setSaving(true);
     try {
-      const current = await fetch('/api/whatsapp/config').then(r => r.json());
+      const current = await apiFetch('/api/whatsapp/config').then(r => r.json());
       const cfg = current.success ? current.data : {};
-      const res = await fetch('/api/whatsapp/config', {
+      const res = await apiFetch('/api/whatsapp/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -196,9 +197,9 @@ export default function RobotPage() {
     if (saving) return;
     setSaving(true);
     try {
-      const current = await fetch('/api/whatsapp/config').then(r => r.json());
+      const current = await apiFetch('/api/whatsapp/config').then(r => r.json());
       const cfg = current.success ? current.data : {};
-      const res = await fetch('/api/whatsapp/config', {
+      const res = await apiFetch('/api/whatsapp/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -226,7 +227,7 @@ export default function RobotPage() {
     const autoWelcome = generateWelcomeMessage();
     setWelcomeMessage(autoWelcome);
     try {
-      const res = await fetch('/api/whatsapp/config', {
+      const res = await apiFetch('/api/whatsapp/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -259,7 +260,7 @@ export default function RobotPage() {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url, { ...options, signal: controller.signal });
+      const res = await apiFetch(url, { ...options, signal: controller.signal });
       clearTimeout(id);
       return res;
     } catch (err: any) {
@@ -321,7 +322,7 @@ export default function RobotPage() {
   async function generateQr() {
     setLoading(true);
     try {
-      const res = await fetch('/api/whatsapp/qr');
+      const res = await apiFetch('/api/whatsapp/qr');
       const data = await res.json();
       if (data.success) {
         setWpStatus(data.data);
@@ -627,7 +628,7 @@ export default function RobotPage() {
                           if (!pairingPhone.trim()) return;
                           setPairingLoading(true);
                           try {
-                            const res = await fetch('/api/whatsapp/pairing-code', {
+                            const res = await apiFetch('/api/whatsapp/pairing-code', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: pairingPhone }),

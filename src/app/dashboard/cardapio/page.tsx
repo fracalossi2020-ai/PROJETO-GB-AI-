@@ -14,6 +14,7 @@ import {
   Sparkles, ImagePlus, Loader2
 } from 'lucide-react';
 import { AI_TEMPLATES } from '@/lib/ai-templates';
+import { apiFetch } from '@/lib/api-client';
 
 /* ---------- Types ---------- */
 interface Product {
@@ -49,7 +50,7 @@ function ImageUploadField({ image, onChange, label, folder = 'products' }: { ima
       const formData = new FormData();
       formData.append('file', file);
       formData.append('folder', folder);
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       const json = await res.json();
       if (json.success) {
         onChange(json.url);
@@ -419,7 +420,7 @@ export default function CardapioPage() {
   async function loadStores() {
     setLoading(true);
     try {
-      const res = await fetch('/api/stores');
+      const res = await apiFetch('/api/stores');
       const d = await res.json();
       if (d.data?.[0]) {
         const store = d.data[0];
@@ -491,7 +492,7 @@ export default function CardapioPage() {
         if (oldIndex === -1 || newIndex === -1) return prev;
         const next = arrayMove(prev, oldIndex, newIndex);
         if (storeId) {
-          fetch('/api/categories/reorder', {
+          apiFetch('/api/categories/reorder', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: next.map((c, i) => ({ id: c.id, sortOrder: i })) }),
@@ -511,7 +512,7 @@ export default function CardapioPage() {
         const next = [...prev];
         next[catIndex] = { ...cat, products: newProducts };
         if (storeId) {
-          fetch('/api/products/reorder', {
+          apiFetch('/api/products/reorder', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: newProducts.map((p, i) => ({ id: p.id, sortOrder: i })) }),
@@ -528,7 +529,7 @@ export default function CardapioPage() {
     if (!product || !storeId) return;
 
     try {
-      const res = await fetch(`/api/products/${prodId}`, {
+      const res = await apiFetch(`/api/products/${prodId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
@@ -549,7 +550,7 @@ export default function CardapioPage() {
 
   async function deleteProduct(catId: string, prodId: string) {
     try {
-      await fetch(`/api/products/${prodId}`, { method: 'DELETE' });
+      await apiFetch(`/api/products/${prodId}`, { method: 'DELETE' });
     } catch {
       // ignore
     }
@@ -561,7 +562,7 @@ export default function CardapioPage() {
   async function addProduct(product: Omit<Product, 'id'>, categoryId: string) {
     if (!storeId) return;
     try {
-      const res = await fetch('/api/products', {
+      const res = await apiFetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...product, storeId, categoryId }),
@@ -583,7 +584,7 @@ export default function CardapioPage() {
 
   async function editProductDetails(catId: string, updated: Product) {
     try {
-      const res = await fetch(`/api/products/${updated.id}`, {
+      const res = await apiFetch(`/api/products/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -612,7 +613,7 @@ export default function CardapioPage() {
   async function addCategory(name: string) {
     if (!storeId) return;
     try {
-      const res = await fetch('/api/categories', {
+      const res = await apiFetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeId, name }),

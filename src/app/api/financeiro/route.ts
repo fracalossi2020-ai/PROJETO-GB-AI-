@@ -1,8 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuthAndSubscription, getStoreForUser } from '@/lib/api-auth';
 
-export async function GET() {
-  const store = await prisma.store.findFirst({
+export async function GET(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
+  const userStore = await getStoreForUser(auth.userId);
+  if (!userStore) {
+    return NextResponse.json({ success: false, message: 'Loja não encontrada' }, { status: 404 });
+  }
+
+  const store = await prisma.store.findUnique({
+    where: { id: userStore.id },
     include: {
       categories: { select: { id: true, name: true } },
       products: { select: { id: true, name: true, price: true, costPrice: true, categoryId: true } },

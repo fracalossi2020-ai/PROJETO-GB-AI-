@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 import { motion } from 'framer-motion';
 import {
   Link2, Copy, Check, Share2, MessageCircle, ExternalLink, QrCode,
@@ -28,7 +29,7 @@ export default function CompartilharPage() {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(() => {
-    fetch('/api/stores')
+    apiFetch('/api/stores')
       .then(r => r.json())
       .then(d => {
         if (d.data?.[0]) {
@@ -70,7 +71,7 @@ export default function CompartilharPage() {
     }
 
     try {
-      const res = await fetch('/api/stores/update', {
+      const res = await apiFetch('/api/stores/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: store.id, slug: cleanSlug }),

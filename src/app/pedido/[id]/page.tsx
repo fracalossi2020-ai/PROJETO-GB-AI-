@@ -75,6 +75,15 @@ export default function RastreamentoPage() {
           <p className="text-white/40 text-sm mt-1">
             {order.status === 'ENTREGUE' ? 'Seu pedido foi entregue!' : 'Atualizamos em tempo real'}
           </p>
+          {order.paymentStatus && (
+            <div className={`mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+              order.paymentStatus === 'PAGO'
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+            }`}>
+              {order.paymentStatus === 'PAGO' ? 'Pagamento confirmado' : 'Aguardando pagamento'}
+            </div>
+          )}
         </div>
 
         {/* Timeline */}

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Package, Calendar, DollarSign, MapPin, User, Phone, CheckCircle2, Clock, XCircle, CreditCard, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '@/lib/api-client';
 
 interface Assignment {
   id: string;
@@ -44,7 +45,7 @@ export default function HistoricoDrawer({ open, personId, personName, onClose, o
     if (!personId) return;
     setLoading(true);
     try {
-      const r = await fetch(`/api/delivery-people/${personId}`);
+      const r = await apiFetch(`/api/delivery-people/${personId}`);
       const d = await r.json();
       if (d.success) setAssignments(d.data);
     } finally {
@@ -58,7 +59,7 @@ export default function HistoricoDrawer({ open, personId, personName, onClose, o
   }, [open, personId, load]);
 
   const togglePay = async (assignment: Assignment) => {
-    const res = await fetch('/api/delivery-people/assign/pay', {
+    const res = await apiFetch('/api/delivery-people/assign/pay', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: assignment.id, paid: !assignment.paid }),
@@ -74,7 +75,7 @@ export default function HistoricoDrawer({ open, personId, personName, onClose, o
   const quitarTudo = async () => {
     if (!personId) return;
     if (!confirm('Quitar pagamento de todas as entregas não pagas?')) return;
-    const res = await fetch('/api/delivery-people/assign/pay', {
+    const res = await apiFetch('/api/delivery-people/assign/pay', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deliveryPersonId: personId, paid: true }),

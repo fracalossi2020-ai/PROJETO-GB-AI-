@@ -16,8 +16,19 @@ export async function POST(req: Request) {
     data: { name, email, password: hashedPassword, phone },
   });
 
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
   await prisma.subscription.create({
-    data: { userId: user.id, plan: 'GRATUITO', status: 'ATIVO', price: 0 },
+    data: {
+      userId: user.id,
+      plan: 'GRATUITO',
+      status: 'ATIVO',
+      price: 0,
+      trialEndsAt,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: trialEndsAt,
+    },
   });
 
   const token = signToken(user.id, user.role);

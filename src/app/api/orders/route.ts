@@ -41,13 +41,10 @@ async function sendWhatsAppConfirmation(phone: string, order: any, storeName?: s
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.error('[Orders] Falha ao enviar WhatsApp:', err.error || res.statusText);
-    } else {
-      console.log('[Orders] WhatsApp de confirmação enviado para', phone);
+      await res.json().catch(() => ({}));
     }
-  } catch (e) {
-    console.error('[Orders] Erro ao enviar WhatsApp:', e);
+  } catch {
+    // Falha silenciosa — não bloqueia o pedido
   }
 }
 
@@ -62,8 +59,13 @@ async function generateOrderNumber(storeId: string): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { storeId, customer, items, type, paymentMethod, changeFor, customerNote, tableNumber } = body;
+  try {
+    const body = await req.json();
+    const { storeId, customer, items, type, paymentMethod, changeFor, customerNote, tableNumber } = body;
+
+    if (!storeId || !customer?.name || !customer?.phone || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ success: false, message: 'Dados do pedido incompletos' }, { status: 400 });
+    }
 
   let cust = await prisma.customer.findUnique({
     where: { storeId_phone: { storeId, phone: customer.phone } },
@@ -149,8 +151,11 @@ export async function POST(req: Request) {
     },
   });
 
-  // Envia confirmação via WhatsApp para o cliente que fez o pedido
-  await sendWhatsAppConfirmation(customer.phone, order, store?.name);
+    // Envia confirmação via WhatsApp para o cliente que fez o pedido
+    await sendWhatsAppConfirmation(customer.phone, order, store?.name);
 
-  return NextResponse.json({ success: true, data: order }, { status: 201 });
+    return NextResponse.json({ success: true, data: order }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message || 'Erro ao criar pedido' }, { status: 500 });
+  }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Package, DollarSign, Calendar, CheckCircle2, Clock, AlertCircle, CreditCard, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiFetch } from '@/lib/api-client';
 
 interface Assignment {
   id: string;
@@ -44,7 +45,7 @@ export default function FechamentoModal({ open, personId, personName, personCode
     if (!personId) return;
     setLoading(true);
     try {
-      const r = await fetch(`/api/delivery-people/${personId}`);
+      const r = await apiFetch(`/api/delivery-people/${personId}`);
       const d = await r.json();
       if (d.success) {
         // Filtra apenas entregas de hoje
@@ -74,7 +75,7 @@ export default function FechamentoModal({ open, personId, personName, personCode
   const handleQuitarTudo = async () => {
     if (!personId) return;
     if (!confirm('Quitar pagamento de todas as entregas de hoje?')) return;
-    const res = await fetch('/api/delivery-people/assign/pay', {
+    const res = await apiFetch('/api/delivery-people/assign/pay', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deliveryPersonId: personId, paid: true }),

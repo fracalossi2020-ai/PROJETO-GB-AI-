@@ -18,12 +18,18 @@ async function main() {
     },
   });
 
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
   await prisma.subscription.create({
     data: {
       userId: user.id,
       plan: 'PREMIUM',
       status: 'ATIVO',
       price: 99.9,
+      trialEndsAt,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: trialEndsAt,
     },
   });
 

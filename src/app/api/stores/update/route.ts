@@ -1,10 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuthAndSubscription(req);
+    if ('status' in auth) return auth;
+
     const body = await req.json();
     const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: 'ID da loja é obrigatório' }, { status: 400 });
+    }
+
+    const existingStore = await prisma.store.findFirst({
+      where: { id, userId: auth.userId },
+    });
+    if (!existingStore) {
+      return NextResponse.json({ success: false, message: 'Loja não encontrada' }, { status: 404 });
+    }
 
     if (!id) {
       return NextResponse.json({ success: false, message: 'ID da loja é obrigatório' }, { status: 400 });

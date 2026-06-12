@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Armchair, ArrowRight, ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 export default function Step6Salao() {
   const router = useRouter();
@@ -39,11 +40,10 @@ export default function Step6Salao() {
         return;
       }
 
-      const res = await fetch('/api/stores/setup', {
+      const res = await apiFetch('/api/stores/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           dados,
           pagamento,
           horario,

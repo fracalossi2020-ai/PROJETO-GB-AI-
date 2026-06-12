@@ -13,6 +13,7 @@ import HistoricoDrawer from './components/HistoricoDrawer';
 import FechamentoModal from './components/FechamentoModal';
 import { useCelebration } from './components/ConfettiCelebration';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api-client';
 
 interface Assignment {
   id: string;
@@ -86,7 +87,7 @@ export default function EntregadoresPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/delivery-people');
+      const r = await apiFetch('/api/delivery-people');
       const d = await r.json();
       if (d.success) setPeople(d.data);
     } finally {
@@ -138,12 +139,12 @@ export default function EntregadoresPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja remover este entregador?')) return;
-    await fetch(`/api/delivery-people?id=${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/delivery-people?id=${id}`, { method: 'DELETE' });
     setPeople(prev => prev.filter(p => p.id !== id));
   };
 
   const handleToggleActive = async (person: DeliveryPerson) => {
-    await fetch('/api/delivery-people', {
+    await apiFetch('/api/delivery-people', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...person, isActive: !person.isActive }),
@@ -153,7 +154,7 @@ export default function EntregadoresPage() {
 
   const handleConfirmarEntrega = async (assignmentId: string) => {
     if (!confirm('Marcar esta entrega como entregue?')) return;
-    const res = await fetch('/api/delivery-people/assign', {
+    const res = await apiFetch('/api/delivery-people/assign', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: assignmentId, status: 'ENTREGUE' }),
@@ -171,7 +172,7 @@ export default function EntregadoresPage() {
 
   const handleQuitarTudo = async (personId: string) => {
     if (!confirm('Quitar pagamento de todas as entregas não pagas deste entregador?')) return;
-    const res = await fetch('/api/delivery-people/assign/pay', {
+    const res = await apiFetch('/api/delivery-people/assign/pay', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deliveryPersonId: personId, paid: true }),

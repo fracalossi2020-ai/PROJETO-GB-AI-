@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, CreditCard, QrCode, Banknote, Loader2, MapPin, Store, Armchair, Check } from 'lucide-react';
+import { ArrowLeft, CreditCard, QrCode, Banknote, Loader2, MapPin, Store, Armchair, Check, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function CheckoutPage() {
   const [changeFor, setChangeFor] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [orderData, setOrderData] = useState<any>(null);
 
   // Salva dados do cliente no localStorage
   useEffect(() => { localStorage.setItem('customer_name', name); }, [name]);
@@ -30,7 +32,7 @@ export default function CheckoutPage() {
   useEffect(() => { localStorage.setItem('customer_complement', complement); }, [complement]);
   useEffect(() => { localStorage.setItem('customer_neighborhood', neighborhood); }, [neighborhood]);
 
-  const cart = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('cart') || '[]') : [];
+  const cart = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`cart-${slug}`) || '[]') : [];
   const subtotal = cart.reduce((sum: number, item: any) => {
     const addonsTotal = item.selectedAddons?.reduce((s: number, a: any) => s + a.price, 0) || 0;
     return sum + (item.product.price + addonsTotal) * item.quantity;
@@ -64,8 +66,14 @@ export default function CheckoutPage() {
 
       const data = await res.json();
       if (data.success) {
-        localStorage.removeItem('cart');
-        setOrderId(data.data.id);
+        localStorage.removeItem(`cart-${slug}`);
+        const createdOrderId = data.data.id;
+        if (paymentMethod === 'PIX_ONLINE' || paymentMethod === 'CARTAO_CREDITO_ONLINE') {
+          router.push(`/${slug}/checkout/pagamento?orderId=${createdOrderId}&method=${paymentMethod}`);
+          return;
+        }
+        setOrderData(data.data);
+        setOrderId(createdOrderId);
         setCompleted(true);
       } else {
         alert(data.message);
@@ -79,8 +87,10 @@ export default function CheckoutPage() {
 
   const paymentMethods = [
     { id: 'PIX', label: 'PIX', icon: QrCode, desc: 'Pagamento instantâneo' },
+    { id: 'PIX_ONLINE', label: 'PIX Online', icon: QrCode, desc: 'Pague agora com QR Code' },
     { id: 'CARTAO_CREDITO', label: 'Cartão de Crédito', icon: CreditCard, desc: 'Na entrega' },
     { id: 'CARTAO_DEBITO', label: 'Cartão de Débito', icon: CreditCard, desc: 'Na entrega' },
+    { id: 'CARTAO_CREDITO_ONLINE', label: 'Cartão Online', icon: CreditCard, desc: 'Pague agora com cartão' },
     { id: 'DINHEIRO', label: 'Dinheiro', icon: Banknote, desc: 'Pague na entrega' },
   ];
 
@@ -90,7 +100,92 @@ export default function CheckoutPage() {
     { id: 'DINE_IN', label: 'Salão', icon: Armchair },
   ];
 
+  function downloadReceipt() {
+    if (!orderData) return;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
+    let y = 10;
+    const lineHeight = 5;
+    const orderNum = orderData.orderNumber || orderData.id.slice(-6).toUpperCase();
+
+    doc.setFontSize(14);
+    doc.text('COMPROVANTE DE PEDIDO', 40, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(12);
+    doc.text(`Pedido #${orderNum}`, 40, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(9);
+    const createdAt = orderData.createdAt
+      ? new Date(orderData.createdAt).toLocaleString('pt-BR')
+      : new Date().toLocaleString('pt-BR');
+    doc.text(`Data/Hora: ${createdAt}`, 5, y);
+    y += lineHeight + 2;
+
+    doc.text(`Cliente: ${name}`, 5, y);
+    y += lineHeight;
+    doc.text(`Telefone: ${phone}`, 5, y);
+    y += lineHeight;
+    if (address) {
+      doc.text(`Endereco: ${address}${complement ? `, ${complement}` : ''}`, 5, y);
+      y += lineHeight;
+      if (neighborhood) {
+        doc.text(`Bairro: ${neighborhood}`, 5, y);
+        y += lineHeight;
+      }
+    }
+    y += 3;
+
+    doc.setDrawColor(200);
+    doc.line(5, y, 75, y);
+    y += 5;
+
+    doc.setFontSize(10);
+    doc.text('ITENS', 5, y);
+    y += 6;
+
+    doc.setFontSize(8);
+    orderData.items.forEach((item: any) => {
+      doc.text(`${item.quantity}x ${item.product.name}`, 5, y);
+      y += 4;
+      doc.text(`  R$ ${item.totalPrice.toFixed(2).replace('.', ',')}`, 60, y, { align: 'right' });
+      if (item.addons && item.addons.length > 0) {
+        y += 4;
+        doc.text(`  + ${item.addons.map((a: any) => a.name).join(', ')}`, 5, y);
+      }
+      if (item.note) {
+        y += 4;
+        doc.text(`  Obs: ${item.note}`, 5, y);
+      }
+      y += 5;
+    });
+
+    doc.line(5, y, 75, y);
+    y += 6;
+
+    doc.setFontSize(9);
+    doc.text(`Subtotal: R$ ${orderData.subtotal.toFixed(2).replace('.', ',')}`, 5, y);
+    y += lineHeight;
+    if (orderData.deliveryFee > 0) {
+      doc.text(`Taxa entrega: R$ ${orderData.deliveryFee.toFixed(2).replace('.', ',')}`, 5, y);
+      y += lineHeight;
+    }
+    doc.setFontSize(11);
+    doc.text(`TOTAL: R$ ${orderData.total.toFixed(2).replace('.', ',')}`, 5, y);
+    y += lineHeight + 3;
+
+    doc.setFontSize(8);
+    if (customerNote) {
+      doc.text(`Observacao geral: ${customerNote}`, 5, y);
+      y += lineHeight;
+    }
+    doc.text(`Pagamento: ${paymentMethods.find((m) => m.id === paymentMethod)?.label}`, 5, y);
+
+    doc.save(`comprovante-pedido-${orderNum}.pdf`);
+  }
+
   if (completed) {
+    const orderNum = orderData?.orderNumber || orderId.slice(-6).toUpperCase();
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#ff9607]/5 via-transparent to-transparent" />
@@ -105,19 +200,25 @@ export default function CheckoutPage() {
 
           <div>
             <h1 className="text-3xl font-black">Pedido confirmado!</h1>
-            <p className="text-white/40 mt-2">Seu pedido já entrou na fila de preparo</p>
+            <p className="text-white/40 mt-2">Seu pedido ja entrou na fila de preparo</p>
           </div>
 
           <div className="backdrop-blur-sm bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6">
-            <p className="text-white/40 text-sm">Número do pedido</p>
+            <p className="text-white/40 text-sm">Numero do pedido</p>
             <p className="text-3xl font-black mt-1">
               <span className="bg-gradient-to-r from-[#ff9607] to-[#ff0080] bg-clip-text text-transparent">
-                #{orderId.slice(-6).toUpperCase()}
+                #{orderNum}
               </span>
             </p>
           </div>
 
           <div className="space-y-3">
+            <button
+              onClick={downloadReceipt}
+              className="block w-full bg-white/[0.03] border border-white/[0.08] text-white py-3.5 rounded-xl font-medium hover:border-white/[0.15] transition-all flex items-center justify-center gap-2"
+            >
+              <Download className="h-4 w-4" /> Baixar comprovante (PDF)
+            </button>
             <button
               onClick={() => router.push(`/pedido/${orderId}`)}
               className="block w-full bg-gradient-to-r from-[#ff9607] to-[#ffaa33] text-black py-3.5 rounded-xl font-bold hover:shadow-[0_0_25px_rgba(255,150,7,0.4)] transition-all"

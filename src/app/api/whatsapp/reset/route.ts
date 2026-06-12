@@ -1,19 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireAuthAndSubscription } from '@/lib/api-auth';
 
 const STATUS_FILE = path.join(process.cwd(), 'prisma', 'whatsapp-status.json');
 const AUTH_DIR = path.join(process.cwd(), 'prisma', 'baileys-auth');
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const auth = await requireAuthAndSubscription(req);
+  if ('status' in auth) return auth;
+
   try {
-    // Limpa pasta de auth
     if (fs.existsSync(AUTH_DIR)) {
       fs.rmSync(AUTH_DIR, { recursive: true, force: true });
     }
     fs.mkdirSync(AUTH_DIR, { recursive: true });
 
-    // Reseta status
     fs.writeFileSync(STATUS_FILE, JSON.stringify({
       qr: null,
       connected: false,

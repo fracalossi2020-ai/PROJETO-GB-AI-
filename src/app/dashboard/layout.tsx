@@ -47,28 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMounted(true);
   }, []);
 
-  // Intercepta fetch para adicionar token JWT automaticamente nas chamadas /api/
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const originalFetch = window.fetch;
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === 'string' ? input : input.toString();
-      if (url.startsWith('/api/')) {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const headers = new Headers(init?.headers);
-          if (!headers.has('Authorization')) {
-            headers.set('Authorization', `Bearer ${token}`);
-          }
-          init = { ...init, headers };
-        }
-      }
-      return originalFetch(input, init);
-    };
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, []);
+  // (chamadas /api/ agora usam apiFetch, que ja adiciona o token)
 
   // Verifica autenticação apenas após montagem completa
   useEffect(() => {

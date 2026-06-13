@@ -25,11 +25,17 @@ const menu = [
 ];
 
 function LoadingScreen() {
+  const noToken = typeof window !== 'undefined' && !localStorage.getItem('token');
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
       <div className="text-center">
         <div className="w-10 h-10 border-2 border-[#ff9607] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-gray-500 text-sm">Carregando...</p>
+        {noToken && (
+          <a href="/login" className="mt-4 inline-block text-[#ff9607] text-sm hover:underline">
+            Clique aqui para fazer login
+          </a>
+        )}
       </div>
     </div>
   );
